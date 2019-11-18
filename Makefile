@@ -24,7 +24,7 @@ OBJ := $(subst src,.obj,$(subst .cpp,.o,$(SRC_FILES)))
 
 CXX := g++
 CXXINCLUDE := -I include 
-CXXFLAGS := -g -Wall -Wextra -Werror # -Weverything
+CXXFLAGS := -g -Wall -Wextra -Werror -std=c++11 # -Weverything
 CXXIGNORE := -Wno-unreachable-code-return -Wno-unused-function \
 			-Wno-reserved-id-macro -Wno-unused-parameter
 CXX_FLAGS_DEPS := -MD

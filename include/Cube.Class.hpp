@@ -1,36 +1,42 @@
 #ifndef CUBE_CLASS_HPP
 # define CUBE_CLASS_HPP
 
-# include "Vector3.Class.hpp"
+# include <glm/vec3.hpp>
+# include <glm/matrix.hpp>
 
 class Cube
 {
 public:
     Cube(
-        const Vec3f &c,
-        const float &r,
-        const Vec3f &sc,
-        const float &refl = 0,
-        const float &transp = 0,
-        const Vec3f &ec = 0);
+        const float &width,
+        const glm::mat4 &transMat,
+        const glm::vec3 &sc,
+        const float &refl,
+        const float &transp,
+        const glm::vec3 &ec); 
     ~Cube();
     Cube(const Cube &) = delete;
     Cube& operator=(const Cube &) = delete;
 
-    Vec3f getCenter();
-    Vec3f getSurfaceColor();
-    Vec3f getEmissionColor();
-    float getHalfLength();
-    float getTransparency();
-    float getReflection();
+    glm::vec3 getMin() const;
+    glm::vec3 getMax() const;
+    glm::vec3 getCenter() const;
+    glm::mat4 gettransMat() const;
 
-    bool intersect(const Vec3f &rayorig, const Vec3f &raydir, float &t0, float &t1) const;
+    glm::vec3 getSurfaceColor() const;
+    glm::vec3 getEmissionColor() const;
+    float getTransparency() const;
+    float getReflection() const;
+
+    bool intersect(const glm::vec3 &rayorig, const glm::vec3 &raydir, float &intersection_dist) const;
 
 private:
-    Vec3f center;                           /// position of the cube
-    float halfLength;                       /// half the length of a side of the cube
-    Vec3f surfaceColor, emissionColor;      /// surface color and emission (light)
-    float transparency, reflection;         /// surface transparency and reflectivity
+    glm::vec3       _min;        // minimum X,Y,Z coords of cube when not transformed.
+    glm::vec3       _max;        // maximum X,Y,Z coords of cube when not transformed.
+    glm::mat4       _transMat;   // transformation matrix applied to cube (the center of the cube corresponds to the 4th column)
+
+    glm::vec3 _surfaceColor, _emissionColor;    // surface color and emission (light)
+    float _transparency, _reflection;             // surface transparency and reflectivity
     
 };
 #endif

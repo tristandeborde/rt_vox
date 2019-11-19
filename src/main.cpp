@@ -1,16 +1,13 @@
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <iostream>
-#include <vector>
+#define GLM_FORCE_CTOR_INIT
 #include "rt_vox.hpp"
-#include "Cube.Class.hpp"
+#include "Octree.Class.hpp"
 
 void    mainLoop(GLFWwindow* window, std::vector<Cube> cubes) {
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
 
-        render();
+        // render(cubes);
         // TODO: rasterize_objects();
 
         glfwSwapBuffers(window);
@@ -22,36 +19,55 @@ void    mainLoop(GLFWwindow* window, std::vector<Cube> cubes) {
 }
 
 void    createObjects(std::vector<Cube> &cubes) {
-    srand48(13);
+    srand48(42);
+    float width = (std::rand() % 4) + 1;
+    glm::mat4 transMat = glm::mat4();
+    transMat[3] = {0, 0.2, -20, 1};
+    cubes.push_back(Cube(width, transMat, glm::vec3(1.00, 0.32, 0.36), 1, 0.5, glm::vec3(0)));
 
+    transMat[3] = {5.0, -1, -15, 1};
+    cubes.push_back(Cube(width, transMat, glm::vec3(0.90, 0.76, 0.46), 1, 0.0, glm::vec3(0)));
+
+    transMat[3] = {5.0, 0, -25, 1};
+    cubes.push_back(Cube(width, transMat, glm::vec3(0.65, 0.77, 0.97), 1, 0.0, glm::vec3(0)));
+
+    transMat[3] = {-5.5, 0, -15, 1};
+    cubes.push_back(Cube(width, transMat, glm::vec3(0.90, 0.90, 0.90), 1, 0.0, glm::vec3(0)));
+
+    /* Automated creation for later
     for (int i = 0; i < 6; i++) {
-        // position, radius, surface color, reflectivity, transparency, emission color
-        float width = (std::rand() % 4) + 1;
-        // TODO: Replace radius with transMat to fit Cube constructor
-        cubes.push_back(width, Cube(glm::vec3( 0.0, -10004, -20), glm::vec3(0.20, 0.20, 0.20), 0, 0.0));
-        /* Keep it here for sanity checks
-        cubes.push_back(Cube(glm::vec3( 0.0,      0, -20),     4, glm::vec3(1.00, 0.32, 0.36), 1, 0.5));
-        cubes.push_back(Cube(glm::vec3( 5.0,     -1, -15),     2, glm::vec3(0.90, 0.76, 0.46), 1, 0.0));
-        cubes.push_back(Cube(glm::vec3( 5.0,      0, -25),     3, glm::vec3(0.65, 0.77, 0.97), 1, 0.0));
-        cubes.push_back(Cube(glm::vec3(-5.5,      0, -15),     3, glm::vec3(0.90, 0.90, 0.90), 1, 0.0));
-        */
-    }
+        width = (std::rand() % 4) + 1;
+        transMat = glm::mat4();
+        transMat[3] = {std::rand() % 6, std::rand() % 2, std::rand() % 5 + 15, 1};
+        //                  width, transMat, surface color, reflectivity, transparency, emission color
+        cubes.push_back(Cube(width, transMat, glm::vec3(0.20, 0.20, 0.20), 1, 0.0, glm::vec3(0)));
+    }*/
+
     // light (yes its initialized as a cube)
-    cubes.push_back(cube(glm::vec3( 0.0,     20, -30),     3, glm::vec3(0.00, 0.00, 0.00), 0, 0.0, glm::vec3(3)));
+    transMat[3] = {0.0, 20, -30, 1};
+    cubes.push_back(Cube(3, transMat, glm::vec3(0.00, 0.00, 0.00), 0, 0.0, glm::vec3(3)));
 }
 
-int main(void)
+int main(int ac, char **av)
 {
     std::vector<Cube> cubes;
+    std::string fn;
+    
+    if (ac > 1)
+        fn = ac > 1 ? std::string(av[1]) : "untitled";
 
     GLFWwindow* window = initWindow();
     if (!window) {
         glfwTerminate();    
         return 1;
     }
-    // TODO: initOctree();
+
     createObjects(cubes);
-    mainLoop(window, cubes);
+    
+    Octree oc(1000, 1000, 250, cubes);
+    
+    render(cubes, fn);
+    // mainLoop(window, cubes);
     return 0;
 }
 

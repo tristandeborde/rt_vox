@@ -1,4 +1,5 @@
 #include "Cube.Class.hpp"
+#include <glm/gtc/type_ptr.hpp>
 
 Cube::Cube(
         const float &width,
@@ -6,8 +7,8 @@ Cube::Cube(
         const glm::vec3 &sc,
         const float &refl = 0,
         const float &transp = 0,
-        const glm::vec3 &ec): 
-    _transMat(transMat), _surfaceColor(sc), _transparency(transp), _reflection(refl), _emissionColor(ec)
+        const glm::vec3 &ec = glm::vec3(0)): 
+    _transMat(transMat), _surfaceColor(sc), _reflection(refl), _transparency(transp), _emissionColor(ec)
 {
     glm::vec3 center(transMat[3].x, transMat[3].y, transMat[3].z);
     this->_min = center - width/2;
@@ -25,7 +26,7 @@ bool Cube::intersect(const glm::vec3 &ray_orig, const glm::vec3 &ray_dir, float 
     float tMax = 100000.0f;
 
     // 4th vector in a transformation matrix is the translation vector
-    glm::vec3 OBBposition_worldspace(this->_transMat[3].x, this->_transMat[3].y, this->_transMat[3].z);
+    glm::vec3 OBBposition_worldspace = this->getCenter();
 
     glm::vec3 delta = OBBposition_worldspace - ray_orig;
 
@@ -63,10 +64,9 @@ bool Cube::intersect(const glm::vec3 &ray_orig, const glm::vec3 &ray_dir, float 
     }
 
 	// Test intersection with the 2 planes perpendicular to the OBB's Y axis
-	// Exactly the same thing than above.
     glm::vec3 yaxis(this->_transMat[1].x, this->_transMat[1].y, this->_transMat[1].z);
-    float e = glm::dot(yaxis, delta);
-    float f = glm::dot(ray_dir, yaxis);
+    e = glm::dot(yaxis, delta);
+    f = glm::dot(ray_dir, yaxis);
 
     if ( fabs(f) > 0.001f ){
         float t1 = (e+this->_min.y)/f;
@@ -87,10 +87,9 @@ bool Cube::intersect(const glm::vec3 &ray_orig, const glm::vec3 &ray_dir, float 
     }
 
 	// Test intersection with the 2 planes perpendicular to the OBB's Z axis
-	// Exactly the same thing than above.
     glm::vec3 zaxis(this->_transMat[2].x, this->_transMat[2].y, this->_transMat[2].z);
-    float e = glm::dot(zaxis, delta);
-    float f = glm::dot(ray_dir, zaxis);
+    e = glm::dot(zaxis, delta);
+    f = glm::dot(ray_dir, zaxis);
 
     if ( fabs(f) > 0.001f ) {
         float t1 = (e+this->_min.z)/f;
@@ -112,6 +111,22 @@ bool Cube::intersect(const glm::vec3 &ray_orig, const glm::vec3 &ray_dir, float 
 
 	intersection_dist = tMin;
     return true;
+}
+
+glm::vec3 Cube::computeNormal(const glm::vec3 &hit_point) const {
+    static const glm::vec3 normals[] = { // A cube has 3 possible orientations
+        glm::vec3(1,0,0),
+        glm::vec3(0,1,0),
+        glm::vec3(0,0,1)
+    };
+    const glm::vec3 interRelative = hit_point - this->getCenter();
+    const float yxCoef = interRelative.y / interRelative.x;
+    const float xzCoef = interRelative.x / interRelative.z;
+    const float yzCoef = interRelative.y / interRelative.z;
+
+    int coef = (std::abs(yxCoef) <= 1 ? (std::abs(xzCoef) <= 1 ? 2 : 0) :
+                      (std::abs(yzCoef) <= 1 ? 2 : 1));
+    return glm::normalize(normals[coef] * interRelative); // Find the normal's sign
 }
 
 // ********************************

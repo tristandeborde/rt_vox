@@ -20,7 +20,6 @@
 #include <vector>
 #include <iostream>
 #include <cassert>
-#include "Vector3.Class.hpp"
 #include "Cube.Class.hpp"
 
 #if defined __linux__ || defined __APPLE__
@@ -31,9 +30,6 @@
 #define INFINITY 1e8
 #endif
 
-//[comment]
-// This variable controls the maximum recursion depth
-//[/comment]
 #define MAX_RAY_DEPTH 5
 
 float mix(const float &a, const float &b, const float &mix)
@@ -63,50 +59,50 @@ glm::vec3 trace(
 
     // TODO: Replace vector<Cube> search by Octree search
     for (unsigned i = 0; i < cubes.size(); ++i) {
-        float t0 = INFINITY, t1 = INFINITY;
-        if (cubes[i].intersect(rayorig, raydir, t0, t1)) {
-            if (t0 < 0) t0 = t1;
-            if (t0 < tnear) {
-                tnear = t0;
+        float intersection_dist;
+        if (cubes[i].intersect(rayorig, raydir, intersection_dist)) {
+            if (intersection_dist < tnear) {
+                tnear = intersection_dist;
                 cube = &cubes[i];
             }
         }
     }
     // if there's no intersection return black or background color
-    if (!cube) return glm::vec3(2);
+    if (!cube)
+        return glm::vec3(2);
     glm::vec3 surfaceColor(0); // color of the ray/surfaceof the object intersected by the ray
-    glm::vec3 phit = rayorig + raydir * tnear; // point of intersection
-    glm::vec3 nhit = phit - cube->getCenter(); // normal at the intersection point
-    nhit = glm::normalize(nhit); // normalize normal direction
+    glm::vec3 hit_point = rayorig + raydir * tnear; // point of intersection
+    glm::vec3 hit_normal = cube->computeNormal(hit_point); // normal at the intersection point
+
     // If the normal and the view direction are not opposite to each other
     // reverse the normal direction. That also means we are inside the cube so set
     // the inside bool to true. Finally reverse the sign of IdotN which we want
     // positive.
     float bias = 1e-4; // add some bias to the point from which we will be tracing
     bool inside = false;
-    if (glm::dot(raydir, nhit) > 0)
+    if (glm::dot(raydir, hit_normal) > 0)
     {
-        nhit = -nhit;
+        hit_normal = -hit_normal;
         inside = true;
     }
     if ((cube->getTransparency() > 0 || cube->getReflection() > 0) && depth < MAX_RAY_DEPTH) {
-        float facingratio = - glm::dot(raydir, nhit);
+        float facingratio = - glm::dot(raydir, hit_normal);
         // change the mix value to tweak the effect
         float fresneleffect = mix(pow(1 - facingratio, 3), 1, 0.1);
         // compute reflection direction (not need to normalize because all vectors
         // are already normalized)
-        glm::vec3 refldir = raydir - nhit * 2.f * glm::dot(raydir, nhit);
+        glm::vec3 refldir = raydir - hit_normal * 2.f * glm::dot(raydir, hit_normal);
         refldir = glm::normalize(refldir);
-        glm::vec3 reflection = trace(phit + nhit * bias, refldir, cubes, depth + 1);
+        glm::vec3 reflection = trace(hit_point + hit_normal * bias, refldir, cubes, depth + 1);
         glm::vec3 refraction(0);
         // if the cube is also transparent compute refraction ray (transmission)
         if (cube->getTransparency()) {
             float ior = 1.1, eta = (inside) ? ior : 1 / ior; // are we inside or outside the surface?
-            float cosi = - glm::dot(nhit, raydir);
+            float cosi = - glm::dot(hit_normal, raydir);
             float k = 1 - eta * eta * (1 - cosi * cosi);
-            glm::vec3 refrdir = raydir * eta + nhit * (eta *  cosi - sqrt(k));
+            glm::vec3 refrdir = raydir * eta + hit_normal * (eta *  cosi - sqrt(k));
             refrdir = glm::normalize(refrdir);
-            refraction = trace(phit - nhit * bias, refrdir, cubes, depth + 1);
+            refraction = trace(hit_point - hit_normal * bias, refrdir, cubes, depth + 1);
         }
         // the result is a mix of reflection and refraction (if the cube is transparent)
         surfaceColor = (
@@ -119,34 +115,28 @@ glm::vec3 trace(
             if (cubes[i].getEmissionColor().x > 0) {
                 // this is a light
                 glm::vec3 transmission(1);
-                glm::vec3 lightDirection = cubes[i].getCenter() - phit;
+                glm::vec3 lightDirection = cubes[i].getCenter() - hit_point;
                 lightDirection = glm::normalize(lightDirection);
                 for (unsigned j = 0; j < cubes.size(); ++j) {
                     if (i != j) {
-                        float t0, t1;
-                        if (cubes[j].intersect(phit + nhit * bias, lightDirection, t0, t1)) {
+                        float intersection_dist;
+                        if (cubes[j].intersect(hit_point + hit_normal * bias, lightDirection, intersection_dist)) {
                             transmission = glm::vec3(0);
                             break;
                         }
                     }
                 }
                 surfaceColor += cube->getSurfaceColor() * transmission *
-                std::max(float(0), glm::dot(nhit, lightDirection)) * cubes[i].getEmissionColor();
+                std::max(float(0), glm::dot(hit_normal, lightDirection)) * cubes[i].getEmissionColor();
             }
         }
     }
-    
     return surfaceColor + cube->getEmissionColor();
 }
 
-//[comment]
-// Main rendering function. We compute a camera ray for each pixel of the image
-// trace it and return a color. If the ray hits a cube, we return the color of the
-// cube at the intersection point, else we return the background color.
-//[/comment]
-void render(const std::vector<Cube> &cubes)
+void render(const std::vector<Cube> &cubes, std::string &fn)
 {
-    unsigned width = 640, height = 480;
+    unsigned width = 1280, height = 1024;
     glm::vec3 *image = new glm::vec3[width * height], *pixel = image;
     float invWidth = 1 / float(width), invHeight = 1 / float(height);
     float fov = 30, aspectratio = width / float(height);
@@ -162,7 +152,7 @@ void render(const std::vector<Cube> &cubes)
         }
     }
     // Save result to a PPM image (keep these flags if you compile under Windows)
-    std::ofstream ofs("./untitled.ppm", std::ios::out | std::ios::binary);
+    std::ofstream ofs("./" + fn + ".ppm", std::ios::out | std::ios::binary);
     ofs << "P6\n" << width << " " << height << "\n255\n";
     for (unsigned i = 0; i < width * height; ++i) {
         ofs << (unsigned char)(std::min(float(1), image[i].x) * 255) <<

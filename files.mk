@@ -11,4 +11,8 @@
 # **************************************************************************** #
 
 SRC :=  main.cpp \
-		glad.cpp
+		glad.cpp \
+		opengl_utils.cpp \
+		raytracer.cpp \
+		Cube.Class.cpp \
+		Octree.Class.cpp

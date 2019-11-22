@@ -1,6 +1,7 @@
 #define GLM_FORCE_CTOR_INIT
 #include "rt_vox.hpp"
 #include "Octree.Class.hpp"
+#include "Raytracer.Class.hpp"
 
 void    mainLoop(GLFWwindow* window, std::vector<Cube> cubes) {
     while (!glfwWindowShouldClose(window))
@@ -50,8 +51,9 @@ void    createObjects(std::vector<Cube> &cubes) {
 
 int main(int ac, char **av)
 {
-    std::vector<Cube> cubes;
-    std::string fn;
+    std::vector<Cube>   cubes;
+    Raytracer           rt(cubes);
+    std::string         fn;
     
     if (ac > 1)
         fn = ac > 1 ? std::string(av[1]) : "untitled";
@@ -66,7 +68,7 @@ int main(int ac, char **av)
     
     Octree oc(1000, 1000, 250, cubes);
     
-    render(cubes, fn);
+    rt.render(fn);
     // mainLoop(window, cubes);
     return 0;
 }

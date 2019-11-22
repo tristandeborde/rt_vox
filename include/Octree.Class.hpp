@@ -6,20 +6,20 @@
 class Octree
 {
 public:
-    Octree(int width, int height, int depth, vector<Cube> &cubes);
+    Octree(int width, int height, int depth, std::vector<Cube> &cubes);
     Octree() = delete;
     Octree(Octree &src) = delete;
     Octree &operator=(Octree &src) = delete;
     ~Octree();
 
-    char* rasterizeScene();
+    void rasterizeScene();
     int getHeight();
     int getWidth();
     int getDepth();
 
 private:
     int _height, _width, _depth;
-    vector<Cube> &cubes;
+    std::vector<Cube> &cubes;
     GLuint _textureID;
 
 };

@@ -13,6 +13,6 @@
 SRC :=  main.cpp \
 		glad.cpp \
 		opengl_utils.cpp \
-		raytracer.cpp \
+		Raytracer.Class.cpp \
 		Cube.Class.cpp \
 		Octree.Class.cpp

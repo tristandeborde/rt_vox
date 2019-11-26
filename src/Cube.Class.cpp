@@ -1,5 +1,6 @@
 #include "Cube.Class.hpp"
 #include <glm/gtc/type_ptr.hpp>
+#include <iostream>
 
 Cube::Cube(
         const float &width,
@@ -11,8 +12,8 @@ Cube::Cube(
     _transMat(transMat), _surfaceColor(sc), _reflection(refl), _transparency(transp), _emissionColor(ec)
 {
     glm::vec3 center(transMat[3].x, transMat[3].y, transMat[3].z);
-    this->_min = center - width/2;
-    this->_max = center + width/2;
+    this->_min = center - (width/2);
+    this->_max = center + (width/2);
     return;
 }
 
@@ -32,82 +33,66 @@ bool Cube::intersect(const glm::vec3 &ray_orig, const glm::vec3 &ray_dir, float 
 
     glm::vec3 xaxis(this->_transMat[0].x, this->_transMat[0].y, this->_transMat[0].z);
     float e = glm::dot(xaxis, delta);
-    float f = glm::dot(xaxis, ray_dir);
+    float f = glm::dot(ray_dir, xaxis);
 
-    if ( fabs(f) > 0.001f ) { // Standard case
-        float t1 = (e + this->_min.x)/f; // Intersection with the "left" plane
-        float t2 = (e + this->_max.x)/f; // Intersection with the "right" plane
-        // t1 and t2 now contain distances betwen ray origin and ray-plane intersections
+    float t1 = (e + this->_min.x)/f; // Intersection with the "left" plane
+    float t2 = (e + this->_max.x)/f; // Intersection with the "right" plane
+    // t1 and t2 now contain distances betwen ray origin and ray-plane intersections
 
-        // We want t1 to represent the nearest intersection, 
-        // so if it's not the case, invert t1 and t2
-        if (t1>t2) {
-            float w=t1;t1=t2;t2=w; // swap t1 and t2
-        }
-
-        // tMax is the nearest "far" intersection (amongst the X,Y and Z planes pairs)
-        if ( t2 < tMax )
-            tMax = t2;
-        // tMin is the farthest "near" intersection (amongst the X,Y and Z planes pairs)
-        if ( t1 > tMin )
-            tMin = t1;
-
-        // And here's the trick :
-        // If "far" is closer than "near", then there is NO intersection.
-        // See the images in the tutorials for the visual explanation.
-        if (tMax < tMin )
-            return false;
-    } 
-    else { // Rare case : the ray is almost parallel to the planes, so they don't have any "intersection"
-        if(-e+this->_min.x > 0.0f || -e+this->_max.x < 0.0f)
-            return false;
+    // We want t1 to represent the nearest intersection, 
+    // so if it's not the case, invert t1 and t2
+    if (t1>t2) {
+        float w=t1;t1=t2;t2=w; // swap t1 and t2
     }
+
+    // tMax is the nearest "far" intersection (amongst the X,Y and Z planes pairs)
+    if ( t2 < tMax )
+        tMax = t2;
+    // tMin is the farthest "near" intersection (amongst the X,Y and Z planes pairs)
+    if ( t1 > tMin )
+        tMin = t1;
+
+    // And here's the trick :
+    // If "far" is closer than "near", then there is NO intersection.
+    // See the images in the tutorials for the visual explanation.
+    if (tMax < tMin )
+        return false;
 
 	// Test intersection with the 2 planes perpendicular to the OBB's Y axis
     glm::vec3 yaxis(this->_transMat[1].x, this->_transMat[1].y, this->_transMat[1].z);
     e = glm::dot(yaxis, delta);
     f = glm::dot(ray_dir, yaxis);
 
-    if ( fabs(f) > 0.001f ){
-        float t1 = (e+this->_min.y)/f;
-        float t2 = (e+this->_max.y)/f;
+    t1 = (e+this->_min.y)/f;
+    t2 = (e+this->_max.y)/f;
 
-        if (t1>t2){float w=t1;t1=t2;t2=w;}
+    if (t1>t2){float w=t1;t1=t2;t2=w;}
 
-        if ( t2 < tMax )
-            tMax = t2;
-        if ( t1 > tMin )
-            tMin = t1;
-        if (tMin > tMax)
-            return false;
-    }
-    else {
-        if(-e+this->_min.y > 0.0f || -e+this->_max.y < 0.0f)
-            return false;
-    }
+    if ( t2 < tMax )
+        tMax = t2;
+    if ( t1 > tMin )
+        tMin = t1;
+    if (tMin > tMax)
+        return false;
+  
 
 	// Test intersection with the 2 planes perpendicular to the OBB's Z axis
     glm::vec3 zaxis(this->_transMat[2].x, this->_transMat[2].y, this->_transMat[2].z);
     e = glm::dot(zaxis, delta);
     f = glm::dot(ray_dir, zaxis);
+    
+    t1 = (e+this->_min.z)/f;
+    t2 = (e+this->_max.z)/f;
+    
+    if (t1>t2){float w=t1;t1=t2;t2=w;}
 
-    if ( fabs(f) > 0.001f ) {
-        float t1 = (e+this->_min.z)/f;
-        float t2 = (e+this->_max.z)/f;
+    if ( t2 < tMax )
+        tMax = t2;
+    if ( t1 > tMin )
+        tMin = t1;
+    if (tMin > tMax)
+        return false;
 
-        if (t1>t2){float w=t1;t1=t2;t2=w;}
-
-        if ( t2 < tMax )
-            tMax = t2;
-        if ( t1 > tMin )
-            tMin = t1;
-        if (tMin > tMax)
-            return false;
-    }
-    else {
-        if(-e+this->_min.z > 0.0f || -e+this->_max.z < 0.0f)
-            return false;
-    }
 
 	intersection_dist = tMin;
     return true;

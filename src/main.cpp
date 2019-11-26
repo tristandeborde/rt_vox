@@ -55,8 +55,7 @@ int main(int ac, char **av)
     Raytracer           rt(cubes);
     std::string         fn;
     
-    if (ac > 1)
-        fn = ac > 1 ? std::string(av[1]) : "untitled";
+    fn = ac > 1 ? std::string(av[1]) : "untitled";
 
     GLFWwindow* window = initWindow();
     if (!window) {

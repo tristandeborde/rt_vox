@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: tdeborde <tdeborde@student.42.fr>          +#+  +:+       +#+         #
+#    By: blefeuvr <blefeuvr@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2019/09/25 17:14:19 by cmaxime           #+#    #+#              #
-#    Updated: 2019/09/26 13:51:04 by tdeborde         ###   ########.fr        #
+#    Updated: 2019/11/25 17:36:57 by blefeuvr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -49,7 +49,7 @@ $(NAME): .obj $(OBJ)
 	@$(MAKE) compile
 
 compile: .obj $(OBJ)
-	@echo "$(LIB)"
+	@echo $(LIB) 
 	@$(CXX) $(OBJ) -o $(NAME) $(LIB) -D BASEPATH=\"$(BASEPATH)\"
 	@echo "$(BOLD)[ $(NAME) ] compiled$(NORMAL)"
 
@@ -57,9 +57,8 @@ compile: .obj $(OBJ)
 	@mkdir .obj
 
 .obj/%.o: src/%.cpp
-	@printf "\\t%sCC%s\\t" "$(_GREEN)" "$(_END)"
 	@$(CXX) -o $@ $(CXXSRC) -c $<
-	@printf "%s\\n" "$<"
+	@printf "\\t%sCC%s\\t%s\\n" "$(_GREEN)" "$(_END)" "$<"
 
 #add dependencies files (*.d)
 DEP_FILES = $(SRC:%.cpp=%.d)

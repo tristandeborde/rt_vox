@@ -51,23 +51,21 @@ void    createObjects(std::vector<Cube> &cubes) {
 
 int main(int ac, char **av)
 {
-    std::vector<Cube>   cubes;
-    Raytracer           rt(cubes);
     std::string         fn;
     
     if (ac > 1)
         fn = ac > 1 ? std::string(av[1]) : "untitled";
-
     GLFWwindow* window = initWindow();
     if (!window) {
         glfwTerminate();    
         return 1;
     }
 
-    createObjects(cubes);
+    // std::vector<Cube>   cubes;
+    // createObjects(cubes);
+    // Octree oc(1000, 1000, 250, cubes);
     
-    Octree oc(1000, 1000, 250, cubes);
-    
+    Raytracer rt(cubes);
     rt.render(fn);
     // mainLoop(window, cubes);
     return 0;

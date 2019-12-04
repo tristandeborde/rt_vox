@@ -20,6 +20,7 @@
 #include <iostream>
 #include <cassert>
 #include "Raytracer.Class.hpp"
+#include <GLFW/glfw3.h>
 
 
 Raytracer::Raytracer(std::vector<Cube> &c): _cubes(c) {
@@ -27,12 +28,92 @@ Raytracer::Raytracer(std::vector<Cube> &c): _cubes(c) {
     this->_height = 1024;
     this->_maxRayDepth = 5;
     this->_bias = 1e-4;
+
+    // _camera
+    this->_camera = new Camera();
+    this->_camera->setFrustumPerspective(60.0f, (float) this->_width / this->_height, 1.f, 2.f);
+    this->_camera->setLookAt(glm::vec3(3.0f, 2.0f, 7.0f), glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+    // Shaders
+    this->_cShader = new ShaderCompute("rt.glslcs");
+    this->_cShader->use();
+    this->_qShader = nullptr;
 }
 
 Raytracer::~Raytracer() {
+    delete this->_camera;
+    delete this->_cShader;
+    delete this->_qShader;
     return;
 }
 
+void Raytracer::trace(void) {
+    glm::vec3 eyeRay;
+    glUseProgram(_cShader->getID());
+
+    /* Set viewing frustum corner rays in shader */
+    glUniform3f(_cShader->getEye(), _camera->getPosition().x, _camera->getPosition().y, _camera->getPosition().z);
+    eyeRay = _camera->getEyeRay(-1, -1);
+    glUniform3f(_cShader->getRay00(), eyeRay.x, eyeRay.y, eyeRay.z);
+    eyeRay = _camera->getEyeRay(-1, 1);
+    glUniform3f(_cShader->getRay01(), eyeRay.x, eyeRay.y, eyeRay.z);
+    eyeRay = _camera->getEyeRay(1, -1);
+    glUniform3f(_cShader->getRay10(), eyeRay.x, eyeRay.y, eyeRay.z);
+    eyeRay = _camera->getEyeRay(1, 1);
+    glUniform3f(_cShader->getRay11(), eyeRay.x, eyeRay.y, eyeRay.z);
+
+    /* Bind level 0 of framebuffer texture as writable image in the shader. */
+    glBindImageTexture(0, tex, 0, false, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+    /* Compute appropriate invocation dimension. */
+    int worksizeX = Raytracer::nextPowerOfTwo(this->_width);
+    int worksizeY = Raytracer::nextPowerOfTwo(this->_height);
+    int workGroupSizeX = this->_cShader->getWorkGroupSize()[0];
+    int workGroupSizeY = this->_cShader->getWorkGroupSize()[1];
+
+    /* Invoke the compute shader. */
+    glDispatchCompute(worksizeX / workGroupSizeX, worksizeY / workGroupSizeY, 1);
+
+    /* Reset image binding. */
+    glBindImageTexture(0, 0, 0, false, 0, GL_READ_WRITE, GL_RGBA32F);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    glUseProgram(0);
+
+    /* Draw rendered image on the screen using textured full-screen quad. */
+    glUseProgram(this->_qShader->getID());
+    glBindVertexArray(vao);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+    glUseProgram(0);
+}
+
+int Raytracer::quadFullScreenVao() {
+    this->_vao = glGenVertexArrays();
+    this->_vbo = glGenBuffers();
+    glBindVertexArray(this->_vao);
+    glBindBuffer(GL_ARRAY_BUFFER, this->_vbo);
+    
+    // Create two triangles composing our quad
+    char triangles[] = {
+        {-1, -1},
+        {1, -1},
+        {1, 1},
+        {1, 1},
+        {-1, 1},
+        {-1, -1},
+    };
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(triangles), triangles, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_BYTE, false, 0, 0L);
+    glBindVertexArray(0);
+    return vao;
+}
+
+
+/* DEPRECATED: CPU Raytracing
 void Raytracer::render(const std::string &fn) {
     glm::vec3 *image = new glm::vec3[this->_width * this->_height];
     glm::vec3 *pixel = image;
@@ -53,6 +134,7 @@ void Raytracer::render(const std::string &fn) {
     }
     this->saveImage(fn, image);
 }
+
 
 void Raytracer::saveImage(const std::string &fn, const glm::vec3 *image) {
     // Save result to a PPM image (keep these flags if you compile under Windows)
@@ -163,8 +245,23 @@ glm::vec3 Raytracer::computeDiffuse(const Cube *cube, const glm::vec3 &hit_point
     }
     return surfaceColor;
 }
+*/
+
+// Utility functions
 
 float Raytracer::mix(const float &a, const float &b, const float &mix)
 {
     return b * mix + a * (1 - mix);
+}
+
+static int  nextPowerOfTwo(unsigned int x){
+    // Source: bits.stephan-brumme.com
+    x--;
+    x |= x >> 1; // handle 2 bit numbers
+    x |= x >> 2; // handle 4 bit numbers
+    x |= x >> 4; // handle 8 bit numbers
+    x |= x >> 8; // handle 16 bit numbers
+    x |= x >> 16; // handle 32 bit numbers
+    x++;
+    return x;
 }

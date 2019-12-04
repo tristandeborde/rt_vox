@@ -1,0 +1,167 @@
+#version 430 core
+
+layout(binding = 0, rgba32f) uniform image2D framebuffer;
+
+// The camera specification
+uniform vec3 eye;
+uniform vec3 ray00;
+uniform vec3 ray10;
+uniform vec3 ray01;
+uniform vec3 ray11;
+
+struct box {
+  vec3  min;
+  vec3  max;
+  mat4  transMat;
+};
+
+#define NUM_BOXES 2
+const box boxes[] = {
+  /* The ground */
+  {vec3(-5.0, -0.1, -5.0), vec3(5.0, 0.0, 5.0), mat4(1.0)},
+  /* Box in the middle */
+  {vec3(-0.5, 0.0, -0.5), vec3(0.5, 1.0, 0.5), mat4(1.0)}
+};
+
+/* AABB method
+vec2 intersectBox(vec3 origin, vec3 dir, const box b) {
+  vec3 tMin = (b.min - origin) / dir;
+  vec3 tMax = (b.max - origin) / dir;
+  vec3 t1 = min(tMin, tMax);
+  vec3 t2 = max(tMin, tMax);
+  float tNear = max(max(t1.x, t1.y), t1.z);
+  float tFar = min(min(t2.x, t2.y), t2.z);
+  return vec2(tNear, tFar);
+} */
+
+vec2 intersectBox(vec3 ray_origin, vec3 ray_dir, const box b) {
+    vec3 center = b.max - b.min;
+    vec3 delta = center - ray_origin;
+
+    vec3 xaxis(b.transMat[0].x, b.transMat[0].y, b.transMat[0].z);
+    float e = dot(xaxis, delta);
+    float f = dot(xaxis, ray_dir);
+
+    if ( fabs(f) > 0.001f ) { // Standard case
+        float t1 = (e + b.min.x)/f; // Intersection with the "left" plane
+        float t2 = (e + b.max.x)/f; // Intersection with the "right" plane
+        // t1 and t2 now contain distances between ray origin and ray-plane intersections
+
+        // We want t1 to represent the nearest intersection, 
+        // so if it's not the case, invert t1 and t2
+        if (t1>t2) {
+            float w=t1;t1=t2;t2=w; // swap t1 and t2
+        }
+
+        // tMax is the nearest "far" intersection (amongst the X,Y and Z planes pairs)
+        if ( t2 < tMax )
+            tMax = t2;
+        // tMin is the farthest "near" intersection (amongst the X,Y and Z planes pairs)
+        if ( t1 > tMin )
+            tMin = t1;
+
+        // And here's the trick :
+        // If "far" is closer than "near", then there is NO intersection.
+        if (tMax < tMin )
+            return false;
+    } 
+    else { // Rare case : the ray is almost parallel to the planes, so they don't have any "intersection"
+        if(-e+b.min.x > 0.0f || -e+b.max.x < 0.0f)
+            return false;
+    }
+
+	// Test intersection with the 2 planes perpendicular to the OBB's Y axis
+    vec3 yaxis(b.transMat[1].x, b.transMat[1].y, b.transMat[1].z);
+    e = dot(yaxis, delta);
+    f = dot(ray_dir, yaxis);
+
+    if ( fabs(f) > 0.001f ){
+        float t1 = (e+b.min.y)/f;
+        float t2 = (e+b.max.y)/f;
+
+        if (t1>t2){float w=t1;t1=t2;t2=w;}
+
+        if ( t2 < tMax )
+            tMax = t2;
+        if ( t1 > tMin )
+            tMin = t1;
+        if (tMax < tMin )
+            return false;
+    }
+    else {
+        if(-e+b.min.y > 0.0f || -e+b.max.y < 0.0f)
+            return false;
+    }
+
+	// Test intersection with the 2 planes perpendicular to the OBB's Z axis
+    vec3 zaxis(b.transMat[2].x, b.transMat[2].y, b.transMat[2].z);
+    e = dot(zaxis, delta);
+    f = dot(ray_dir, zaxis);
+
+    if ( fabs(f) > 0.001f ) {
+        float t1 = (e+b.min.z)/f;
+        float t2 = (e+b.max.z)/f;
+
+        if (t1>t2){float w=t1;t1=t2;t2=w;}
+
+        if ( t2 < tMax )
+            tMax = t2;
+        if ( t1 > tMin )
+            tMin = t1;
+        if (tMax < tMin )
+            return false;
+    }
+    else {
+        if(-e+b.min.z > 0.0f || -e+b.max.z < 0.0f)
+            return false;
+    }
+
+	intersection_dist = tMin;
+    return true;
+}
+
+#define MAX_SCENE_BOUNDS 1000.0
+
+struct hitinfo {
+  float intersection_dist;
+  int   bi;
+};
+
+bool intersectBoxes(vec3 origin, vec3 dir, out hitinfo info) {
+    float smallest = MAX_SCENE_BOUNDS;
+    bool found = false;
+    for (int i = 0; i < NUM_BOXES; i++) {
+        float intersection_dist;
+        if (intersectBox(origin, dir, boxes[i], &intersection_dist) && lambda.x < smallest) {
+            info.bi = i;
+            smallest = intersection_dist;
+            found = true;
+        }
+    }
+    return found;
+}
+
+vec4 trace(vec3 origin, vec3 dir) {
+    hitinfo i;
+    if (intersectBoxes(origin, dir, i)) {
+        vec4 gray = vec4(i.bi / 10.0 + 0.8);
+        return vec4(gray.rgb, 1.0);
+    }
+    return vec4(0.0, 0.0, 0.0, 1.0);
+}
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+void main(void) {
+    ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(framebuffer);
+    // Bounds checking. Did not understand why it's necessary ?
+    if (pix.x >= size.x || pix.y >= size.y) {
+        return;
+    }
+    // Normalization, and trilinear interpolation to loop over all screen pixels
+    vec2 pos = vec2(pix) / vec2(size.x, size.y);
+    vec3 dir = mix(mix(ray00, ray01, pos.y), mix(ray10, ray11, pos.y), pos.x);
+    vec4 color = trace(eye, dir);
+    imageStore(framebuffer, pix, color);
+}

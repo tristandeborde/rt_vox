@@ -1,5 +1,17 @@
 #include "rt_vox.hpp"
 
+private int createFramebufferTexture() {
+    // Create the texture that will serve as our framebuffer.
+    int tex = glGenTextures();
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    ByteBuffer black = null;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, black);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return tex;
+}
+
 void processInput(GLFWwindow *window) {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -32,5 +44,13 @@ GLFWwindow* initWindow(void) {
             window = NULL;
         }
     }
+
+    // TODO: Add functions from compute shader tutorial
+    /* Create all needed GL resources */
+    tex = createFramebufferTexture();
+    vao = quadFullScreenVao();
+    quadProgram = createQuadProgram();
+    initQuadProgram();
+
     return window;
 }

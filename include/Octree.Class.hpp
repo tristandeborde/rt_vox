@@ -16,6 +16,7 @@ public:
     int getHeight();
     int getWidth();
     int getDepth();
+    
 
 private:
     int _height, _width, _depth;

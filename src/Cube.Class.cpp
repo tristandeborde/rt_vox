@@ -30,14 +30,16 @@ bool Cube::intersect(const glm::vec3 &ray_orig, const glm::vec3 &ray_dir, float 
 
     glm::vec3 delta = OBBposition_worldspace - ray_orig;
 
-    glm::vec3 xaxis(this->_transMat[0].x, this->_transMat[0].y, this->_transMat[0].z);
-    float e = glm::dot(xaxis, delta);
-    float f = glm::dot(xaxis, ray_dir);
+    // Cube is an OBB, so we need its X axis (not the world's X axis)
+    glm::vec3 xaxis(this->_transMat[0].x, this->_transMat[0].y, this->_transMat[0].z); 
+
+    float e = glm::dot(xaxis, delta); // project delta onto OBB's xaxis
+    float f = glm::dot(xaxis, ray_dir); // project raydir onto OBB's xaxis
 
     if ( fabs(f) > 0.001f ) { // Standard case
         float t1 = (e + this->_min.x)/f; // Intersection with the "left" plane
         float t2 = (e + this->_max.x)/f; // Intersection with the "right" plane
-        // t1 and t2 now contain distances betwen ray origin and ray-plane intersections
+        // t1 and t2 now contain distances between ray origin and ray-plane intersections
 
         // We want t1 to represent the nearest intersection, 
         // so if it's not the case, invert t1 and t2

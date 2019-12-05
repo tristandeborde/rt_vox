@@ -37,9 +37,12 @@ bool Cube::intersect(const glm::vec3 &ray_orig, const glm::vec3 &ray_dir, float 
     float e = glm::dot(xaxis, delta); // project delta onto OBB's xaxis
     float f = glm::dot(xaxis, ray_dir); // project raydir onto OBB's xaxis
 
+    float t1;
+    float t2;
+
     if ( fabs(f) > 0.001f ) { // Standard case
-        float t1 = (e + this->_min.x)/f; // Intersection with the "left" plane
-        float t2 = (e + this->_max.x)/f; // Intersection with the "right" plane
+        t1 = (e + this->_min.x)/f; // Intersection with the "left" plane
+        t2 = (e + this->_max.x)/f; // Intersection with the "right" plane
         // t1 and t2 now contain distances between ray origin and ray-plane intersections
 
         // We want t1 to represent the nearest intersection, 
@@ -65,19 +68,6 @@ bool Cube::intersect(const glm::vec3 &ray_orig, const glm::vec3 &ray_dir, float 
         if(-e+this->_min.x > 0.0f || -e+this->_max.x < 0.0f)
             return false;
     }
-
-    // tMax is the nearest "far" intersection (amongst the X,Y and Z planes pairs)
-    if ( t2 < tMax )
-        tMax = t2;
-    // tMin is the farthest "near" intersection (amongst the X,Y and Z planes pairs)
-    if ( t1 > tMin )
-        tMin = t1;
-
-    // And here's the trick :
-    // If "far" is closer than "near", then there is NO intersection.
-    // See the images in the tutorials for the visual explanation.
-    if (tMax < tMin )
-        return false;
 
 	// Test intersection with the 2 planes perpendicular to the OBB's Y axis
     glm::vec3 yaxis(this->_transMat[1].x, this->_transMat[1].y, this->_transMat[1].z);

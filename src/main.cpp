@@ -3,12 +3,12 @@
 #include "Octree.Class.hpp"
 #include "Raytracer.Class.hpp"
 
-void    mainLoop(GLFWwindow* window, std::vector<Cube> cubes) {
+void    mainLoop(GLFWwindow* window, Raytracer &rt, std::vector<Cube> cubes) {
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
 
-        // render(cubes);
+        rt.trace();
         // TODO: rasterize_objects();
 
         glfwSwapBuffers(window);
@@ -61,13 +61,12 @@ int main(int ac, char **av)
         return 1;
     }
 
-    // std::vector<Cube>   cubes;
-    // createObjects(cubes);
+    std::vector<Cube>   cubes;
+    createObjects(cubes);
     // Octree oc(1000, 1000, 250, cubes);
     
     Raytracer rt(cubes);
-    rt.render(fn);
-    // mainLoop(window, cubes);
+    mainLoop(window, rt, cubes);
     return 0;
 }
 

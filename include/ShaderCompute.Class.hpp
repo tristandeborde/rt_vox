@@ -17,7 +17,7 @@ private:
     int _ray11Uniform;
 
 public:
-    ShaderCompute(const char* filePath);
+    ShaderCompute();
     ~ShaderCompute();
 
     // activate the shader

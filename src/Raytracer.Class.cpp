@@ -21,6 +21,7 @@
 #include <cassert>
 #include "Raytracer.Class.hpp"
 #include <GLFW/glfw3.h>
+#include <glad/glad.h>
 
 
 Raytracer::Raytracer(std::vector<Cube> &c): _cubes(c) {
@@ -35,9 +36,16 @@ Raytracer::Raytracer(std::vector<Cube> &c): _cubes(c) {
     this->_camera->setLookAt(glm::vec3(3.0f, 2.0f, 7.0f), glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
     // Shaders
-    this->_cShader = new ShaderCompute("rt.glslcs");
-    this->_cShader->use();
-    this->_qShader = nullptr;
+    this->_cShader = new ShaderCompute();
+    this->_cShader->init();
+    this->_qShader = new ShaderQuad();
+    this->_cShader->init();
+
+    // VAO / VBO
+    this->quadFullScreenVao();
+
+    // Texture
+    this->createFramebufferTexture();
 }
 
 Raytracer::~Raytracer() {
@@ -49,7 +57,7 @@ Raytracer::~Raytracer() {
 
 void Raytracer::trace(void) {
     glm::vec3 eyeRay;
-    glUseProgram(_cShader->getID());
+   this->_cShader->use();
 
     /* Set viewing frustum corner rays in shader */
     glUniform3f(_cShader->getEye(), _camera->getPosition().x, _camera->getPosition().y, _camera->getPosition().z);
@@ -63,7 +71,7 @@ void Raytracer::trace(void) {
     glUniform3f(_cShader->getRay11(), eyeRay.x, eyeRay.y, eyeRay.z);
 
     /* Bind level 0 of framebuffer texture as writable image in the shader. */
-    glBindImageTexture(0, tex, 0, false, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    glBindImageTexture(0, this->_tex, 0, false, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
     /* Compute appropriate invocation dimension. */
     int worksizeX = Raytracer::nextPowerOfTwo(this->_width);
@@ -80,38 +88,46 @@ void Raytracer::trace(void) {
     glUseProgram(0);
 
     /* Draw rendered image on the screen using textured full-screen quad. */
-    glUseProgram(this->_qShader->getID());
-    glBindVertexArray(vao);
-    glBindTexture(GL_TEXTURE_2D, tex);
+    this->_qShader->use();
+    glBindVertexArray(this->_vao);
+    glBindTexture(GL_TEXTURE_2D, this->_tex);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
     glUseProgram(0);
 }
 
-int Raytracer::quadFullScreenVao() {
-    this->_vao = glGenVertexArrays();
-    this->_vbo = glGenBuffers();
+void Raytracer::quadFullScreenVao() {
+    glGenVertexArrays(1, &this->_vao);
+    glGenBuffers(1, &this->_vbo);
     glBindVertexArray(this->_vao);
     glBindBuffer(GL_ARRAY_BUFFER, this->_vbo);
     
     // Create two triangles composing our quad
     char triangles[] = {
-        {-1, -1},
-        {1, -1},
-        {1, 1},
-        {1, 1},
-        {-1, 1},
-        {-1, -1},
+        -1, -1,
+        1, -1,
+        1, 1,
+        1, 1,
+        -1, 1,
+        -1, -1,
     };
 
     glBufferData(GL_ARRAY_BUFFER, sizeof(triangles), triangles, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_BYTE, false, 0, 0L);
     glBindVertexArray(0);
-    return vao;
 }
 
+// Allocate empty texture
+void Raytracer::createFramebufferTexture() {
+    glGenTextures(1, &this->_tex);
+    glBindTexture(GL_TEXTURE_2D, this->_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, this->_width, this->_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
 
 /* DEPRECATED: CPU Raytracing
 void Raytracer::render(const std::string &fn) {

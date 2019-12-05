@@ -32,22 +32,24 @@ private:
     int                 _maxRayDepth;
     float               _bias;
 
-    // OpenGL attributes
     Camera          *_camera;
+
+    // Shaders
     ShaderCompute   *_cShader;
     ShaderQuad      *_qShader;
-    int             _vao;
-    int             _vbo;
+    
+    // OpenGL objects
+    GLuint          _vao;
+    GLuint          _vbo;
+    GLuint          _tex;
 
     // glm::vec3   trace(const glm::vec3 &rayorig, const glm::vec3 &raydir, const int &depth);
     // const Cube  *searchCube(const glm::vec3 &rayorig, const glm::vec3 &raydir, float &tnear);
     // void        saveImage(const std::string &fn, const glm::vec3 *image);
     glm::vec3   computeDiffuse(const Cube *cube, const glm::vec3 &hit_point, const glm::vec3 &hit_normal);
     glm::vec3   computeReflRefr(const Cube *cube, const glm::vec3 &hit_point, const glm::vec3 &hit_normal, const glm::vec3 &raydir, const int &depth, const bool &inside);
-
-    int quadFullScreenVao();
-
-
+    void        quadFullScreenVao();
+    void        createFramebufferTexture();
 };
 
 

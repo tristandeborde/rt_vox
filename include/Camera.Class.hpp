@@ -31,7 +31,6 @@ private:
 
 	bool orthographic;
 
-    void setLookAt(glm::vec3 position, glm::vec3 lookAt, glm::vec3 up);
     void setDirection(glm::vec3 direction);
 	void setPosition(glm::vec3 position);
 	void setUp(glm::vec3 up);
@@ -54,7 +53,7 @@ public:
 	void doRefreshViewMatrix();
     void doRefreshProjectionMatrix();
 
-	glm::vec3 Camera::getEyeRay(float x, float y);
+	glm::vec3 getEyeRay(float x, float y);
 	glm::mat4 getProjectionMatrix();
 	glm::mat4 getViewMatrix();
 	glm::vec3 getDirection();
@@ -62,6 +61,8 @@ public:
     glm::vec3 getUp();
 	glm::vec3 getRight();
 
+    void setLookAt(glm::vec3 position, glm::vec3 lookAt, glm::vec3 up);
+	
 	// TODO: Check if frustum is necessary (where is frustum culling impl'd ?)
 	void setOrthographic(bool orthographic);
 	void setFrustumRight(float frustumRight);
@@ -75,8 +76,6 @@ public:
 	float getFrustumBottom();
 	float getFrustumTop();
 	bool isOrthographic();
-}
-
 };
 
 #endif

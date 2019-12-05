@@ -7,11 +7,12 @@
 
 class ShaderQuad: public Shader
 {
-private:
-    /* data */
 public:
-    ShaderQuad(/* args */);
+    ShaderQuad();
     ~ShaderQuad();
+
+    void init();
+
 };
 
 #endif

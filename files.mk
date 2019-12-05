@@ -15,4 +15,8 @@ SRC :=  main.cpp \
 		opengl_utils.cpp \
 		Raytracer.Class.cpp \
 		Cube.Class.cpp \
-		Octree.Class.cpp
+		Shader.Class.cpp \
+		ShaderCompute.Class.cpp \
+		ShaderQuad.Class.cpp \
+		Raytracer.Class.cpp \
+		Camera.Class.cpp

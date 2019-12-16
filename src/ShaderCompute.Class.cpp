@@ -3,9 +3,7 @@
 
 ShaderCompute::ShaderCompute()
 {
-    std::string path = this->_folder + "rt.glslcs";
-
-    int cshader = this->createShader(path.c_str(), GL_COMPUTE_SHADER);
+    int cshader = this->createShader("rt.glslcs", GL_COMPUTE_SHADER);
 
     // create shader Program
     this->_ID = glCreateProgram();

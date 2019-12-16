@@ -103,9 +103,8 @@ bool Cube::intersect(const glm::vec3 &ray_orig, const glm::vec3 &ray_dir, float 
         tMin = t1;
     if (tMin > tMax)
         return false;
-
-
-	intersection_dist = tMin;
+    
+    intersection_dist = tMin;
     return true;
 }
 

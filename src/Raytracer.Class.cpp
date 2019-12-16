@@ -270,7 +270,7 @@ float Raytracer::mix(const float &a, const float &b, const float &mix)
     return b * mix + a * (1 - mix);
 }
 
-static int  nextPowerOfTwo(unsigned int x){
+int  Raytracer::nextPowerOfTwo(unsigned int x){
     // Source: bits.stephan-brumme.com
     x--;
     x |= x >> 1; // handle 2 bit numbers

@@ -11,7 +11,7 @@ ShaderQuad::ShaderQuad()
     glBindAttribLocation(this->_ID, 0, "vertex");
     glBindFragDataLocation(this->_ID, 0, "color");
     glLinkProgram(this->_ID);
-    glGetProgrami(this->_ID, GL_LINK_STATUS);
+    // glGetProgram(this->_ID, GL_LINK_STATUS);
     checkCompileErrors(this->_ID, "QUAD");
     glDeleteShader(vshader);
     glDeleteShader(fshader);
@@ -21,7 +21,7 @@ ShaderQuad::~ShaderQuad()
 {
 }
 
-void Shader::init() {
+void ShaderQuad::init() {
     glUseProgram(this->_ID);
     int texUniform = glGetUniformLocation(this->_ID, "tex");
     glUniform1i(texUniform, 0);

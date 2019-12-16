@@ -16,6 +16,7 @@ unsigned int Shader::createShader(const char* filePath, int type) {
     try 
     {
         // open files
+        std::cout << path << std::endl;
         computeShaderFile.open(path);
         std::stringstream computeShaderStream;
         // read file's buffer contents into streams
@@ -25,7 +26,7 @@ unsigned int Shader::createShader(const char* filePath, int type) {
         // convert stream into string
         computeCode = computeShaderStream.str();			
     }
-    catch (std::ifstream::failure e)
+    catch (std::ifstream::failure &e)
     {
         std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
     }

@@ -10,36 +10,49 @@ uniform vec3 ray10;
 uniform vec3 ray01;
 uniform vec3 ray11;
 
-struct box {
+struct Box 
+{
   vec3  min;
   vec3  max;
   mat4  transMat;
 };
 
 #define NUM_BOXES 2
-const box boxes[] = {
+const Box boxes[] = {
   /* The ground */
   {vec3(-5.0, -0.1, -5.0), vec3(5.0, 0.0, 5.0), mat4(1.0)},
   /* Box in the middle */
   {vec3(-0.5, 0.0, -0.5), vec3(0.5, 1.0, 0.5), mat4(1.0)}
 };
 
-/* AABB method
-vec2 intersectBox(vec3 origin, vec3 dir, const box b) {
-  vec3 tMin = (b.min - origin) / dir;
-  vec3 tMax = (b.max - origin) / dir;
-  vec3 t1 = min(tMin, tMax);
-  vec3 t2 = max(tMin, tMax);
-  float tNear = max(max(t1.x, t1.y), t1.z);
-  float tFar = min(min(t2.x, t2.y), t2.z);
-  return vec2(tNear, tFar);
-} */
+// AABB method
+/*
+bool intersectBox(vec3 origin, vec3 dir, const Box b, inout float intersection_dist) {
+    vec3 tMin = (b.min - origin) / dir;
+    vec3 tMax = (b.max - origin) / dir;
+    vec3 t1 = min(tMin, tMax);
+    vec3 t2 = max(tMin, tMax);
+    float tNear = max(max(t1.x, t1.y), t1.z);
+    float tFar = min(min(t2.x, t2.y), t2.z);
+    if (tNear > 0.0 && tNear < tFar)
+    {
+        intersection_dist = tNear;
+        return true;
+    }
+}
+*/
 
-vec2 intersectBox(vec3 ray_origin, vec3 ray_dir, const box b) {
+float fabs(float f) {
+    return (f > 0 ? f : -f);
+}
+
+bool intersectBox(vec3 ray_origin, vec3 ray_dir, const Box b, inout float intersection_dist) {
     vec3 center = b.max - b.min;
     vec3 delta = center - ray_origin;
+    float tMin = 0.0f;
+    float tMax = 100000.0f;
 
-    vec3 xaxis(b.transMat[0].x, b.transMat[0].y, b.transMat[0].z);
+    vec3 xaxis = {b.transMat[0].x, b.transMat[0].y, b.transMat[0].z};
     float e = dot(xaxis, delta);
     float f = dot(xaxis, ray_dir);
 
@@ -55,15 +68,13 @@ vec2 intersectBox(vec3 ray_origin, vec3 ray_dir, const box b) {
         }
 
         // tMax is the nearest "far" intersection (amongst the X,Y and Z planes pairs)
-        if ( t2 < tMax )
-            tMax = t2;
+        tMax = t2 < tMax ? t2 : tMax;
         // tMin is the farthest "near" intersection (amongst the X,Y and Z planes pairs)
-        if ( t1 > tMin )
-            tMin = t1;
+        tMin = t1 > tMin ? t1 : tMin;
 
         // And here's the trick :
         // If "far" is closer than "near", then there is NO intersection.
-        if (tMax < tMin )
+        if (tMax < tMin)
             return false;
     } 
     else { // Rare case : the ray is almost parallel to the planes, so they don't have any "intersection"
@@ -72,7 +83,7 @@ vec2 intersectBox(vec3 ray_origin, vec3 ray_dir, const box b) {
     }
 
 	// Test intersection with the 2 planes perpendicular to the OBB's Y axis
-    vec3 yaxis(b.transMat[1].x, b.transMat[1].y, b.transMat[1].z);
+    vec3 yaxis = {b.transMat[1].x, b.transMat[1].y, b.transMat[1].z};
     e = dot(yaxis, delta);
     f = dot(ray_dir, yaxis);
 
@@ -82,10 +93,9 @@ vec2 intersectBox(vec3 ray_origin, vec3 ray_dir, const box b) {
 
         if (t1>t2){float w=t1;t1=t2;t2=w;}
 
-        if ( t2 < tMax )
-            tMax = t2;
-        if ( t1 > tMin )
-            tMin = t1;
+        tMax = t2 < tMax ? t2 : tMax;
+        tMin = t1 > tMin ? t1 : tMin;
+
         if (tMax < tMin )
             return false;
     }
@@ -95,7 +105,7 @@ vec2 intersectBox(vec3 ray_origin, vec3 ray_dir, const box b) {
     }
 
 	// Test intersection with the 2 planes perpendicular to the OBB's Z axis
-    vec3 zaxis(b.transMat[2].x, b.transMat[2].y, b.transMat[2].z);
+    vec3 zaxis = {b.transMat[2].x, b.transMat[2].y, b.transMat[2].z};
     e = dot(zaxis, delta);
     f = dot(ray_dir, zaxis);
 
@@ -105,10 +115,9 @@ vec2 intersectBox(vec3 ray_origin, vec3 ray_dir, const box b) {
 
         if (t1>t2){float w=t1;t1=t2;t2=w;}
 
-        if ( t2 < tMax )
-            tMax = t2;
-        if ( t1 > tMin )
-            tMin = t1;
+        tMax = t2 < tMax ? t2 : tMax;
+        tMin = t1 > tMin ? t1 : tMin;
+
         if (tMax < tMin )
             return false;
     }
@@ -132,8 +141,10 @@ bool intersectBoxes(vec3 origin, vec3 dir, out hitinfo info) {
     float smallest = MAX_SCENE_BOUNDS;
     bool found = false;
     for (int i = 0; i < NUM_BOXES; i++) {
-        float intersection_dist;
-        if (intersectBox(origin, dir, boxes[i], &intersection_dist) && lambda.x < smallest) {
+        float intersection_dist = 0.f;
+        if (intersectBox(origin, dir, boxes[i], intersection_dist)
+            && intersection_dist < smallest) {
+            info.intersection_dist = intersection_dist;
             info.bi = i;
             smallest = intersection_dist;
             found = true;

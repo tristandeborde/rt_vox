@@ -24,40 +24,38 @@
 #include <glad/glad.h>
 
 // Todo: checker si val d'init de la camera OK avec tuto
-Raytracer::Raytracer(std::vector<Cube> &c): _cubes(c) {
+Raytracer::Raytracer(std::vector<Cube> &c, Camera *cam): _cubes(c), _camera(cam) {
     this->_width = 1280;
     this->_height = 1024;
     this->_maxRayDepth = 5;
     this->_bias = 1e-4;
 
     // _camera
-    this->_camera = new Camera();
     this->_camera->setFrustumPerspective(60.0f, (float) this->_width / this->_height, 1.f, 2.f);
     this->_camera->setLookAt(glm::vec3(3.0f, 2.0f, 7.0f), glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-    // Shaders
-    this->_cShader = new ShaderCompute();
-    this->_cShader->init();
-    this->_qShader = new ShaderQuad();
-    this->_cShader->init();
+    
+    // Texture
+    this->createFramebufferTexture();
 
     // VAO / VBO
     this->quadFullScreenVao();
-
-    // Texture
-    this->createFramebufferTexture();
+    
+    // Shaders
+    this->_qShader = new ShaderQuad();
+    this->_qShader->init();
+    this->_cShader = new ShaderCompute();
+    this->_cShader->init();
 }
 
 Raytracer::~Raytracer() {
-    delete this->_camera;
-    delete this->_cShader;
     delete this->_qShader;
+    delete this->_cShader;
     return;
 }
 
-void Raytracer::trace(void) {
+void Raytracer::render_GPU(void) {
     glm::vec3 eyeRay;
-   this->_cShader->use();
+    this->_cShader->use();
 
     /* Set viewing frustum corner rays in shader */
     glUniform3f(_cShader->getEye(), _camera->getPosition().x, _camera->getPosition().y, _camera->getPosition().z);
@@ -71,7 +69,7 @@ void Raytracer::trace(void) {
     glUniform3f(_cShader->getRay11(), eyeRay.x, eyeRay.y, eyeRay.z);
 
     /* Bind level 0 of framebuffer texture as writable image in the shader. */
-    glBindImageTexture(0, this->_tex, 0, false, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    glBindImageTexture(0, this->_tex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
     /* Compute appropriate invocation dimension. */
     int worksizeX = Raytracer::nextPowerOfTwo(this->_width);
@@ -83,7 +81,7 @@ void Raytracer::trace(void) {
     glDispatchCompute(worksizeX / workGroupSizeX, worksizeY / workGroupSizeY, 1);
 
     /* Reset image binding. */
-    glBindImageTexture(0, 0, 0, false, 0, GL_READ_WRITE, GL_RGBA32F);
+    glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     glUseProgram(0);
 
@@ -122,11 +120,105 @@ void Raytracer::quadFullScreenVao() {
 // Allocate empty texture
 void Raytracer::createFramebufferTexture() {
     glGenTextures(1, &this->_tex);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, this->_tex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, this->_width, this->_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, this->_width, this->_height, 0, GL_RGBA, GL_FLOAT, NULL);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+// CPU ########################
+// ############################
+
+void saveImage(const std::string &fn, const glm::vec3 *image) {
+    // Save result to a PPM image (keep these flags if you compile under Windows)
+    std::ofstream ofs("./" + fn + ".ppm", std::ios::out | std::ios::binary);
+    ofs << "P6\n" << 1280 << " " << 1024 << "\n255\n";
+    for (unsigned i = 0; i < 1280 * 1024; ++i) {
+        ofs << (unsigned char)(std::min(float(1), image[i].x) * 255) <<
+               (unsigned char)(std::min(float(1), image[i].y) * 255) <<
+               (unsigned char)(std::min(float(1), image[i].z) * 255);
+    }
+    ofs.close();
+    delete [] image;
+}
+
+struct box {
+glm::vec3 min;
+glm::vec3 max;
+};
+
+const box boxes[] = {
+/* The ground */
+{glm::vec3(-5.0, -0.1, -5.0), glm::vec3(5.0, 0.0, 5.0)},
+/* Box in the middle */
+{glm::vec3(-0.5, 0.0, -0.5), glm::vec3(0.5, 1.0, 0.5)}
+};
+
+struct hitinfo {
+glm::vec2 lambda;
+int bi;
+};
+
+#define MAX_SCENE_BOUNDS 100.0
+#define NUM_BOXES 2
+
+glm::vec2 intersectBox(glm::vec3 origin, glm::vec3 dir, const box b) {
+    glm::vec3 tMin = (b.min - origin) / dir;
+    glm::vec3 tMax = (b.max - origin) / dir;
+    glm::vec3 t1 = min(tMin, tMax);
+    glm::vec3 t2 = max(tMin, tMax);
+    float tNear = glm::max(glm::max(t1.x, t1.y), t1.z);
+    float tFar = glm::min(glm::min(t2.x, t2.y), t2.z);
+    return glm::vec2(tNear, tFar);
+}
+
+bool intersectBoxes(glm::vec3 origin, glm::vec3 dir, hitinfo &info) {
+    float smallest = MAX_SCENE_BOUNDS;
+    bool found = false;
+    for (int i = 0; i < NUM_BOXES; i++) {
+        glm::vec2 lambda = intersectBox(origin, dir, boxes[i]);
+        if (lambda.x > 0.0 && lambda.x < lambda.y && lambda.x < smallest) {
+            info.lambda = lambda;
+            info.bi = i;
+            smallest = lambda.x;
+            found = true;
+        }
+    }
+    return found;
+}
+
+glm::vec3 trace(glm::vec3 origin, glm::vec3 dir) {
+    hitinfo i;
+    if (intersectBoxes(origin, dir, i)) {
+        return glm::vec3(i.bi / 10.0 + 0.8);
+    }
+    return glm::vec3(0.0, 0.0, 0.0);
+}
+
+void Raytracer::render(void) {
+    /* Set viewing frustum corner rays in shader */
+    glm::vec3 eye = _camera->getPosition();
+    glm::vec3 eyeRay00 = _camera->getEyeRay(-1, -1);
+    glm::vec3 eyeRay01 = _camera->getEyeRay(-1, 1);
+    glm::vec3 eyeRay10 = _camera->getEyeRay(1, -1);
+    glm::vec3 eyeRay11 = _camera->getEyeRay(1, 1);
+
+    glm::vec3 *image = new glm::vec3[1280 * 1024];
+    glm::vec3 *pixel = image;
+
+    for (int w = 0; w < 1280; w++) {
+        for (int h = 0; h < 1024; h++) {
+            glm::vec2 pix(w, h);
+            glm::vec2 pos = pix / glm::vec2(1280 - 1, 1024 - 1);
+            glm::vec3 dir = glm::mix(glm::mix(eyeRay00, eyeRay01, pos.y), glm::mix(eyeRay10, eyeRay11, pos.y), pos.x);
+            *pixel = trace(eye, dir);
+            pixel++;
+        }
+    }
+    saveImage("test1", image);
+    exit(0);
 }
 
 /* DEPRECATED: CPU Raytracing
@@ -149,20 +241,6 @@ void Raytracer::render(const std::string &fn) {
         }
     }
     this->saveImage(fn, image);
-}
-
-
-void Raytracer::saveImage(const std::string &fn, const glm::vec3 *image) {
-    // Save result to a PPM image (keep these flags if you compile under Windows)
-    std::ofstream ofs("./" + fn + ".ppm", std::ios::out | std::ios::binary);
-    ofs << "P6\n" << this->_width << " " << this->_height << "\n255\n";
-    for (unsigned i = 0; i < this->_width * this->_height; ++i) {
-        ofs << (unsigned char)(std::min(float(1), image[i].x) * 255) <<
-               (unsigned char)(std::min(float(1), image[i].y) * 255) <<
-               (unsigned char)(std::min(float(1), image[i].z) * 255);
-    }
-    ofs.close();
-    delete [] image;
 }
 
 glm::vec3 Raytracer::trace(const glm::vec3 &rayorig, const glm::vec3 &raydir, const int &depth)

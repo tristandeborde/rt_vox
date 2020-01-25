@@ -12,7 +12,7 @@ ShaderQuad::ShaderQuad()
     glBindFragDataLocation(this->_ID, 0, "color");
     glLinkProgram(this->_ID);
     // glGetProgram(this->_ID, GL_LINK_STATUS);
-    checkCompileErrors(this->_ID, "QUAD");
+    checkLinkingErrors(this->_ID, "QUAD");
     glDeleteShader(vshader);
     glDeleteShader(fshader);
 }

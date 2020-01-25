@@ -1,23 +1,7 @@
 #define GLM_FORCE_CTOR_INIT
-#include "rt_vox.hpp"
 #include "Octree.Class.hpp"
+#include "OpenGL.Class.hpp"
 #include "Raytracer.Class.hpp"
-
-void    mainLoop(GLFWwindow* window, Raytracer &rt, std::vector<Cube> cubes) {
-    while (!glfwWindowShouldClose(window))
-    {
-        processInput(window);
-
-        rt.trace();
-        // TODO: rasterize_objects();
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
-
-    // Clear all allocated GLFW resources.
-    glfwTerminate();
-}
 
 void    createObjects(std::vector<Cube> &cubes) {
     srand48(42);
@@ -55,18 +39,19 @@ int main(int ac, char **av)
     
     if (ac > 1)
         fn = ac > 1 ? std::string(av[1]) : "untitled";
-    GLFWwindow* window = initWindow();
-    if (!window) {
-        glfwTerminate();    
-        return 1;
-    }
 
     std::vector<Cube>   cubes;
     createObjects(cubes);
     // Octree oc(1000, 1000, 250, cubes);
     
-    Raytracer rt(cubes);
-    mainLoop(window, rt, cubes);
+    Camera cam;
+    
+    OpenGL gl(&cam);
+
+    Raytracer rt(cubes, &cam);
+    
+    gl.mainLoop(rt, cubes);
+
     return 0;
 }
 

@@ -46,6 +46,7 @@ protected:
     unsigned int _ID;
 
     void checkCompileErrors(GLuint shader, std::string type);
+    void checkLinkingErrors(GLuint shader, std::string type);
     std::string _folder;
 
 };

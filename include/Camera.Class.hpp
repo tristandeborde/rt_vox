@@ -31,9 +31,6 @@ private:
 
 	bool orthographic;
 
-    void setDirection(glm::vec3 direction);
-	void setPosition(glm::vec3 position);
-	void setUp(glm::vec3 up);
 
 	// TODO: Check if frustum is necessary (where is frustum culling impl'd ?)
 	void setFrustumNear(float frustumNear);
@@ -47,6 +44,10 @@ public:
     ~Camera();
     Camera &operator=(Camera &rhs) = delete;
     Camera(Camera &rhs) = delete;
+
+    void setDirection(glm::vec3 direction);
+	void setPosition(glm::vec3 position);
+	void setUp(glm::vec3 up);
 
     void doRefreshInverseProjectionViewMatrix();
 	glm::mat4 getInverseProjectionViewMatrix();

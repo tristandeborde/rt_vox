@@ -3,13 +3,15 @@
 
 ShaderCompute::ShaderCompute()
 {
-    int cshader = this->createShader("rt.glslcs", GL_COMPUTE_SHADER);
-
     // create shader Program
     this->_ID = glCreateProgram();
+    
+    int cshader = this->createShader("rt.glslcs", GL_COMPUTE_SHADER);
+
     glAttachShader(this->_ID, cshader);
     glLinkProgram(this->_ID);
-    checkCompileErrors(this->_ID, "COMPUTE");
+    checkLinkingErrors(this->_ID, "COMPUTE");
+
     glDeleteShader(cshader);
 }
 

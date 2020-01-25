@@ -1,7 +1,7 @@
 #ifndef OCTREE_CLASS_HPP
 # define OCTREE_CLASS_HPP
 
-# include "rt_vox.hpp"
+# include "OpenGL.Class.hpp"
 
 class Octree
 {

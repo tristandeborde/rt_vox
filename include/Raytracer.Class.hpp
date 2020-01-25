@@ -11,13 +11,14 @@
 class Raytracer
 {
 public:
-    Raytracer(std::vector<Cube >&c);
+    Raytracer(std::vector<Cube >&c, Camera *cam);
     ~Raytracer();
     Raytracer() = delete;
     Raytracer(Raytracer &src) = delete;
     Raytracer &operator=(Raytracer &src) = delete;
 
-    void trace();
+    void render();
+    void render_GPU();
 
     // Utility funcs
     static float    mix(const float &a, const float &b, const float &mix);
@@ -42,6 +43,7 @@ private:
     GLuint          _vao;
     GLuint          _vbo;
     GLuint          _tex;
+    GLuint          _tex2;
 
     // glm::vec3   trace(const glm::vec3 &rayorig, const glm::vec3 &raydir, const int &depth);
     // const Cube  *searchCube(const glm::vec3 &rayorig, const glm::vec3 &raydir, float &tnear);

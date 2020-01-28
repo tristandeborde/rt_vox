@@ -24,15 +24,15 @@
 #include <glad/glad.h>
 
 // Todo: checker si val d'init de la camera OK avec tuto
-Raytracer::Raytracer(std::vector<Cube> &c, Camera *cam): _cubes(c), _camera(cam) {
+Raytracer::Raytracer(std::vector<Cube> &c, Camera *cam, OpenGL *gl): _cubes(c), _camera(cam), _gl(gl) {
     this->_width = 1280;
     this->_height = 1024;
     this->_maxRayDepth = 5;
     this->_bias = 1e-4;
 
-    // _camera
-    this->_camera->setFrustumPerspective(60.0f, (float) this->_width / this->_height, 1.f, 2.f);
-    this->_camera->setLookAt(glm::vec3(3.0f, 2.0f, 7.0f), glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    // // _camera
+    // this->_camera->setFrustumPerspective(60.0f, (float) this->_width / this->_height, 1.f, 2.f);
+    // this->_camera->setLookAt(glm::vec3(3.0f, 2.0f, 7.0f), glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     
     // Texture
     this->createFramebufferTexture();
@@ -45,7 +45,7 @@ Raytracer::Raytracer(std::vector<Cube> &c, Camera *cam): _cubes(c), _camera(cam)
     this->_qShader->init();
     this->_cShader = new ShaderCompute();
     this->_cShader->init();
-}
+} 
 
 Raytracer::~Raytracer() {
     delete this->_qShader;
@@ -53,12 +53,32 @@ Raytracer::~Raytracer() {
     return;
 }
 
+void    Raytracer::mainLoop(){
+
+    GLFWwindow *win = this->_gl->getWindow();
+
+    while (win && !glfwWindowShouldClose(win))
+    {
+        this->_gl->updateInput();
+        this->_camera->update(*this->_gl, 0.1f);
+
+        this->render_GPU();
+        // TODO: rasterize_objects();
+
+        glfwSwapBuffers(win);
+    }
+
+    // Clear all allocated GLFW resources.
+    glfwTerminate();
+}
+
+
 void Raytracer::render_GPU(void) {
     glm::vec3 eyeRay;
     this->_cShader->use();
 
     /* Set viewing frustum corner rays in shader */
-    glUniform3f(_cShader->getEye(), _camera->getPosition().x, _camera->getPosition().y, _camera->getPosition().z);
+    glUniform3f(_cShader->getEye(), _camera->getPos().x, _camera->getPos().y, _camera->getPos().z);
     eyeRay = _camera->getEyeRay(-1, -1);
     glUniform3f(_cShader->getRay00(), eyeRay.x, eyeRay.y, eyeRay.z);
     eyeRay = _camera->getEyeRay(-1, 1);
@@ -199,7 +219,7 @@ glm::vec3 trace(glm::vec3 origin, glm::vec3 dir) {
 
 void Raytracer::render(void) {
     /* Set viewing frustum corner rays in shader */
-    glm::vec3 eye = _camera->getPosition();
+    glm::vec3 eye = _camera->getPos();
     glm::vec3 eyeRay00 = _camera->getEyeRay(-1, -1);
     glm::vec3 eyeRay01 = _camera->getEyeRay(-1, 1);
     glm::vec3 eyeRay10 = _camera->getEyeRay(1, -1);

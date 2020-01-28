@@ -1,7 +1,6 @@
 #include "OpenGL.Class.hpp"
 
-OpenGL::OpenGL(Camera *cam): 
-    _cam(cam), _screen_height(480), _screen_width(640)
+OpenGL::OpenGL(int w, int h): _screen_width(w), _screen_height(h)
 {
     this->initWindow();
     return;
@@ -12,24 +11,28 @@ OpenGL::~OpenGL()
     return;
 }
 
-void    OpenGL::mainLoop(Raytracer &rt, std::vector<Cube> cubes) {
-
-    while (this->_window && !glfwWindowShouldClose(this->_window))
-    {
-        this->processInput();
-
-        rt.render();
-        // TODO: rasterize_objects();
-
-        glfwSwapBuffers(this->_window);
-        glfwPollEvents();
-    }
-
-    // Clear all allocated GLFW resources.
-    glfwTerminate();
+void OpenGL::updateInput()
+{
+    double x, y;
+    glfwPollEvents();
+    glfwGetCursorPos(this->_window, &x, &y);
+    this->_xDiff = x - _xPos;
+    this->_yDiff = y - _yPos;
+    this->_xPos = x;
+    this->_yPos = y;
 }
 
+bool OpenGL::isKeyPressed(unsigned int GLFW_Key) const
+{
+    return (glfwGetKey(this->_window, GLFW_Key) == GLFW_PRESS);
+}
 
+bool OpenGL::isMouseButtonPressed(unsigned int GLFW_MouseButton) const
+{
+    return (glfwGetMouseButton(this->_window, GLFW_MouseButton) == GLFW_PRESS);
+}
+
+/*
 //TODO: Attach Camera pointer to modify it.
 void OpenGL::processInput() {
     if(glfwGetKey(this->_window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -44,6 +47,7 @@ void OpenGL::processInput() {
     if (glfwGetKey(this->_window, GLFW_KEY_D) == GLFW_PRESS)
         _cam->setPosition(_cam->getPosition() + glm::normalize(glm::cross(_cam->getDirection(), _cam->getUp())) * cameraSpeed);
 }
+*/
 
 void framebuffer_size_callback(int width, int height) {
     // make sure the viewport matches the new this->_window dimensions; note that width and 
@@ -77,3 +81,22 @@ void OpenGL::initWindow(void) {
 GLFWwindow * OpenGL::getWindow() {
     return this->_window;
 }
+
+double OpenGL::getXPos() const
+{
+    return this->_xPos;
+}
+
+double OpenGL::getYPos() const {
+    return this->_yPos;
+}
+
+double OpenGL::getXPosDiff() const {
+    return this->_xDiff;
+}
+
+double OpenGL::getYPosDiff() const {
+    return this->_yDiff;
+}
+
+

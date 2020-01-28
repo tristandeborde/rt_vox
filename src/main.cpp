@@ -1,7 +1,10 @@
 #define GLM_FORCE_CTOR_INIT
-#include "Octree.Class.hpp"
+// #include "Octree.Class.hpp"
 #include "OpenGL.Class.hpp"
 #include "Raytracer.Class.hpp"
+
+# define WIDTH 1280
+# define HEIGHT 1024
 
 void    createObjects(std::vector<Cube> &cubes) {
     srand48(42);
@@ -44,13 +47,16 @@ int main(int ac, char **av)
     createObjects(cubes);
     // Octree oc(1000, 1000, 250, cubes);
     
-    Camera cam;
+    glm::vec3 pos(3.0f, 2.0f, 7.0f);
+    glm::vec3 lookAt(0.f, 0.5f, 0.f);
+    glm::vec3 up(0.f, 1.f, 0.f);
+    Camera cam(WIDTH, HEIGHT, 45.f, 0.01f, pos, lookAt, up);
     
-    OpenGL gl(&cam);
+    OpenGL gl(WIDTH, HEIGHT);
 
-    Raytracer rt(cubes, &cam);
+    Raytracer rt(cubes, &cam, &gl);
     
-    gl.mainLoop(rt, cubes);
+    rt.mainLoop();
 
     return 0;
 }

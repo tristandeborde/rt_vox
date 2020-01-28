@@ -11,12 +11,13 @@
 class Raytracer
 {
 public:
-    Raytracer(std::vector<Cube >&c, Camera *cam);
+    Raytracer(std::vector<Cube >&c, Camera *cam, OpenGL *gl);
     ~Raytracer();
     Raytracer() = delete;
     Raytracer(Raytracer &src) = delete;
     Raytracer &operator=(Raytracer &src) = delete;
 
+    void mainLoop();
     void render();
     void render_GPU();
 
@@ -34,6 +35,7 @@ private:
     float               _bias;
 
     Camera          *_camera;
+    OpenGL          *_gl;
 
     // Shaders
     ShaderCompute   *_cShader;

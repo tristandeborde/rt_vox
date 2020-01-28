@@ -5,9 +5,6 @@
 # include <GLFW/glfw3.h>
 # include <vector>
 # include <iostream>
-# include "Cube.Class.hpp"
-# include "Camera.Class.hpp"
-# include "Raytracer.Class.hpp"
 
 # ifdef __APPLE__
     # define GL_VERSION_MAJOR 3
@@ -24,19 +21,32 @@ private:
     void processInput();
     void initWindow(void);
 
-    Camera *_cam;
     GLFWwindow* _window;
-    const unsigned int _screen_height;
     const unsigned int _screen_width;
+    const unsigned int _screen_height;
+
+    double _xPos = 0;
+    double _yPos = 0;
+    double _xDiff = 0;
+    double _yDiff = 0;
 
 public:
-    OpenGL(Camera *cam);
+    OpenGL(int width, int height);
     ~OpenGL();
     OpenGL(const OpenGL &) = delete;
     OpenGL& operator=(const OpenGL &) = delete;
     
-    void mainLoop(Raytracer &rt, std::vector<Cube> cubes);
     GLFWwindow * getWindow();
+
+    double getXPos() const;
+    double getYPos() const;
+    double getXPosDiff() const;
+    double getYPosDiff() const;
+
+    void updateInput();
+    bool isKeyPressed(unsigned int GLFW_Key) const;
+    bool isMouseButtonPressed(unsigned int GLFW_MouseButton) const;
+
 };
 
 

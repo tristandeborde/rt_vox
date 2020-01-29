@@ -18,7 +18,7 @@ public:
     Raytracer &operator=(Raytracer &src) = delete;
 
     void mainLoop();
-    void render();
+    void render_CPU();
     void render_GPU();
 
     // Utility funcs
@@ -26,7 +26,6 @@ public:
     static int      nextPowerOfTwo(unsigned int);
 
 private:
-    // TODO: Add a pointer to octree - for now objects are init'd in compute shader.
     std::vector<Cube>  &_cubes;
     
     // Raytracing attributes
@@ -47,9 +46,6 @@ private:
     GLuint          _tex;
     GLuint          _tex2;
 
-    // glm::vec3   trace(const glm::vec3 &rayorig, const glm::vec3 &raydir, const int &depth);
-    // const Cube  *searchCube(const glm::vec3 &rayorig, const glm::vec3 &raydir, float &tnear);
-    // void        saveImage(const std::string &fn, const glm::vec3 *image);
     glm::vec3   computeDiffuse(const Cube *cube, const glm::vec3 &hit_point, const glm::vec3 &hit_normal);
     glm::vec3   computeReflRefr(const Cube *cube, const glm::vec3 &hit_point, const glm::vec3 &hit_normal, const glm::vec3 &raydir, const int &depth, const bool &inside);
     void        quadFullScreenVao();

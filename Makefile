@@ -12,9 +12,6 @@
 
 NAME = rt_vox
 
-# ifeq ($(UNAME_S),Darwin)
-# 	BREW_PATH = $(HOME)/.brew
-# endif
 BASEPATH = $(CURDIR)
 
 include colors.mk
@@ -26,24 +23,15 @@ OBJ := $(subst src,.obj,$(subst .cpp,.o,$(SRC_FILES)))
 
 CXX := g++
 CXXINCLUDE := -I include 
-CXXFLAGS := -g -Wfatal-errors -Wall -Wextra -Werror -std=c++11 # -Weverything
+CXXFLAGS := -g -Wall -Wextra -Werror -std=c++11
 CXXIGNORE := -Wno-unreachable-code-return -Wno-unused-function \
 			-Wno-reserved-id-macro -Wno-unused-parameter
 CXX_FLAGS_DEPS := -MD
 
-# ifeq ($(shell [ -d $(BREW_PATH) ]; echo $$?), 0) 
-#     CXXINCLUDE += -isystem $(BREW_PATH)/include
-# endif
-
 CXXSRC := $(CXXINCLUDE) $(CXXFLAGS) $(CXXIGNORE) $(CXX_FLAGS_DEPS) -D BASEPATH=\"$(BASEPATH)\"
 
-LIB := -ldl
-# ifeq ($(shell [ -d $(BREW_PATH) ]; echo $$?), 0) 
-# 	LIB += -L $(BREW_PATH)/lib
-# endif
-LIB += -lglfw
+LIB := -ldl -lglfw
 
-# LIB := $(LIB) -lmlx -framework OpenGL -framework AppKit
 
 all : $(NAME)
 

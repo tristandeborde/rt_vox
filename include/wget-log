@@ -1,0 +1,15 @@
+--2020-01-29 22:59:32--  http://glad.dav1d.de/
+Resolving glad.dav1d.de (glad.dav1d.de)... 91.121.181.196
+Connecting to glad.dav1d.de (glad.dav1d.de)|91.121.181.196|:80... connected.
+HTTP request sent, awaiting response... 301 Moved Permanently
+Location: https://glad.dav1d.de/ [following]
+--2020-01-29 22:59:32--  https://glad.dav1d.de/
+Connecting to glad.dav1d.de (glad.dav1d.de)|91.121.181.196|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 142260 (139K) [text/html]
+Saving to: ‘index.html’
+
+index.html                     0%[                                              ]       0  --.-KB/s               index.html                   100%[=============================================>] 138,93K  --.-KB/s    in 0,04s   
+
+2020-01-29 22:59:33 (3,80 MB/s) - ‘index.html’ saved [142260/142260]
+

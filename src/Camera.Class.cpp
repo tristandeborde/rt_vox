@@ -11,7 +11,7 @@ Camera::Camera(int width, int height, float fovY, float sensitivity,
     _right = glm::normalize(glm::cross(up, _lookDir));
     _up = glm::cross(_right, _lookDir);
 
-    _fovY = std::tan(fovY * std::acos(-1) / 180.f / 2.0f);
+    _fovY = std::tan(fovY * std::acos(-1.0f) / 180.0f / 2.0f);
     _fovX = (static_cast<float>(_width) * _fovY)/static_cast<float>(_height);
 }
 

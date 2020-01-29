@@ -20,8 +20,8 @@
 #include <iostream>
 #include <cassert>
 #include "Raytracer.Class.hpp"
-#include <GLFW/glfw3.h>
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 // Todo: checker si val d'init de la camera OK avec tuto
 Raytracer::Raytracer(std::vector<Cube> &c, Camera *cam, OpenGL *gl): _cubes(c), _camera(cam), _gl(gl) {

@@ -9,7 +9,7 @@
 # ifdef __APPLE__
     # define GL_VERSION_MAJOR 3
 # elif __linux__
-    # define GL_VERSION_MAJOR 4
+    # define GL_VERSION_MAJOR 3
 # endif    
 
 // settings

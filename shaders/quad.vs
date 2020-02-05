@@ -1,4 +1,4 @@
-#version 430 core
+#version 330 core
 
 /* The position of the vertex as two-dimensional vector */
 in vec2 vertex;

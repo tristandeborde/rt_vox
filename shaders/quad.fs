@@ -1,4 +1,4 @@
-#version 430 core
+#version 330 core
 
 /* This comes interpolated from the vertex shader */
 in vec2 texcoord;

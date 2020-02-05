@@ -1,4 +1,4 @@
-#version 460 core
+#version 330 core
 //#extension GL_ARB_compute_shader: enable
 
 layout(binding = 0, rgba32f) uniform image2D framebuffer;

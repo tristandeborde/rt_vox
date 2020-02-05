@@ -23,11 +23,14 @@ ShaderCompute::~ShaderCompute()
 void ShaderCompute::init() {
     glUseProgram(this->_ID);
     glGetProgramiv(this->_ID, GL_COMPUTE_WORK_GROUP_SIZE, this->_workGroupSize);
-    this->_eyeUniform = glGetUniformLocation(this->_ID, "eye");
-    this->_ray00Uniform = glGetUniformLocation(this->_ID, "ray00");
-    this->_ray10Uniform = glGetUniformLocation(this->_ID, "ray10");
-    this->_ray01Uniform = glGetUniformLocation(this->_ID, "ray01");
-    this->_ray11Uniform = glGetUniformLocation(this->_ID, "ray11");
+    this->_camPosUniform = glGetUniformLocation(this->_ID, "camera.pos");
+    this->_camDirUniform = glGetUniformLocation(this->_ID, "camera.dir");
+    this->_camYAxisUniform = glGetUniformLocation(this->_ID, "camera.yAxis");
+    this->_camXAxisUniform = glGetUniformLocation(this->_ID, "camera.xAxis");
+    this->_camTanFovXUniform = glGetUniformLocation(this->_ID, "camera.tanFovX");
+    this->_camTanFovYUniform = glGetUniformLocation(this->_ID, "camera.tanFovY");
+    this->_widthUniform = glGetUniformLocation(this->_ID, "width");
+    this->_heightUniform = glGetUniformLocation(this->_ID, "height");
     glUseProgram(0);
 }
 
@@ -35,22 +38,34 @@ int *ShaderCompute::getWorkGroupSize() {
     return this->_workGroupSize;
 }
 
-int ShaderCompute::getEye() {
-    return this->_eyeUniform;
+int ShaderCompute::getCamPos() {
+    return this->_camPosUniform;
 }
 
-int ShaderCompute::getRay00() {
-    return this->_ray00Uniform;
+int ShaderCompute::getCamDir() {
+    return this->_camDirUniform;
 }
 
-int ShaderCompute::getRay01() {
-    return this->_ray01Uniform;
+int ShaderCompute::getCamYAxis() {
+    return this->_camYAxisUniform;
 }
 
-int ShaderCompute::getRay10() {
-    return this->_ray10Uniform;
+int ShaderCompute::getCamXAxis() {
+    return this->_camXAxisUniform;
 }
 
-int ShaderCompute::getRay11() {
-    return this->_ray11Uniform;
+int ShaderCompute::getCamTanFovX() {
+    return this->_camTanFovXUniform;
+}
+
+int ShaderCompute::getCamTanFovY() {
+    return this->_camTanFovYUniform;
+}
+
+int ShaderCompute::getWidth() {
+    return this->_widthUniform;
+}
+
+int ShaderCompute::getHeight() {
+    return this->_heightUniform;
 }

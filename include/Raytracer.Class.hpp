@@ -18,7 +18,6 @@ public:
     Raytracer &operator=(Raytracer &src) = delete;
 
     void mainLoop();
-    void render_CPU();
     void render_GPU();
 
     // Utility funcs

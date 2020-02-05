@@ -1,14 +1,15 @@
 #version 460 core
-//#extension GL_ARB_compute_shader: enable
 
 layout(binding = 0, rgba32f) uniform image2D framebuffer;
 
-// The camera specification
-uniform vec3 eye;
-uniform vec3 ray00;
-uniform vec3 ray10;
-uniform vec3 ray01;
-uniform vec3 ray11;
+struct Camera{
+    vec3 pos;
+    vec3 dir;
+    vec3 yAxis;
+    vec3 xAxis;
+    float tanFovY;
+    float tanFovX;
+};
 
 struct box {
     vec3 min;
@@ -27,8 +28,27 @@ struct hitinfo {
     int bi;
 };
 
+// The camera specification
+uniform Camera camera;
+uniform uint width;
+uniform uint height;
+
 #define MAX_SCENE_BOUNDS 100.0
 #define NUM_BOXES 2
+
+// Initialize the primary ray for pixel x, y
+vec3 initRay(uint x, uint y)
+{
+    float halfWidth = float(width) / 2.0f;
+    float halfHeight = float(height) / 2.0f;
+
+    float a = camera.tanFovX * ((float(x) - halfWidth + 0.5f) / halfWidth);
+    float b = camera.tanFovY * ((halfHeight - float(y) - 0.5f) / halfHeight);
+
+    vec3 dir = normalize((a * camera.xAxis + b * camera.yAxis + camera.dir).xyz);
+
+    return dir;
+}
 
 vec2 intersectBox(vec3 origin, vec3 dir, const box b) {
     vec3 tMin = (b.min - origin) / dir;
@@ -72,8 +92,8 @@ void main(void) {
         return;
     }
     vec2 pos = vec2(pix) / vec2(size.x - 1, size.y - 1);
-    vec3 dir = mix(mix(ray00, ray01, pos.y), mix(ray10, ray11, pos.y), pos.x);
-    vec4 color = trace(eye, dir);
+    vec3 ray = initRay(pix.x, pix.y);
+    vec4 color = trace(camera.pos, ray);
     imageStore(framebuffer, pix, color);
 }
 

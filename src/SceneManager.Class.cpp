@@ -14,9 +14,9 @@ void SceneManager::readScene(const std::string &filepath)
 
     std::vector<Cube> cubes = {
         /* The ground */
-        {glm::vec3(-5.0, -0.1, -5.0), glm::vec3(5.0, 0.0, 5.0), glm::mat4(1.0)},
+        {glm::vec3(-5.0f, -0.1f, -5.0f), glm::vec3(5.0f, 0.0f, 5.0f), glm::mat4(1.0f)},
         /* Cube in the middle */
-        {glm::vec3(-0.5, 0.0, -0.5), glm::vec3(0.5, 1.0, 0.5), glm::mat4(1.0)}
+        {glm::vec3(-0.5f, 0.0f, -0.5f), glm::vec3(0.5f, 1.0f, 0.5f), glm::mat4(1.0f)}
     };
     m_scene.cubes.reserve(cubes.size());
     for (const auto &c : cubes) {
@@ -138,14 +138,12 @@ void SceneManager::uploadScene(GLuint computeShaderID, GLuint* computeShaderstor
         }
         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 
-        int type = 3;
         for (const auto &c : m_scene.cubes) {
             const auto matIdx = c.second + m_numMaterialsInShader;
 
             std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[0], &(c.first.min) , sizeof(glm::vec3));
             std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[1], &(c.first.max) , sizeof(glm::vec3));
             std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[2], &(c.first.transMat) , sizeof(glm::mat4));
-            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[3], &type , sizeof(int));
             std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[4], &(matIdx) , sizeof(int));
             m_numObjInShader++;
         }

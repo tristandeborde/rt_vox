@@ -33,7 +33,7 @@ Raytracer::Raytracer(Camera *cam, OpenGL *gl): _camera(cam), _gl(gl) {
     glGenBuffers(3, _storageBufferIDs);
     SceneManager sceneManager;
     sceneManager.uploadScenes(filepaths, _cShader->getID(), _storageBufferIDs);
-} 
+}
 
 Raytracer::~Raytracer() {
     delete this->_qShader;

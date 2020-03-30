@@ -1,0 +1,224 @@
+#include "SceneManager.Class.hpp"
+#include "Shader.Class.hpp"
+#include <stdlib.h>
+#include <time.h>
+
+void SceneManager::readScene(const std::string &filepath)
+{
+    m_scene.clear();
+
+    /* TODO: Create obj file parser
+    auto data = reader.getData(); */
+
+    srand(time(0));
+
+    std::vector<Cube> cubes = {
+        /* The ground */
+        {glm::vec3(-5.0, -0.1, -5.0), glm::vec3(5.0, 0.0, 5.0), glm::mat4(1.0)},
+        /* Cube in the middle */
+        {glm::vec3(-0.5, 0.0, -0.5), glm::vec3(0.5, 1.0, 0.5), glm::mat4(1.0)}
+    };
+    m_scene.cubes.reserve(cubes.size());
+    for (const auto &c : cubes) {
+        int material_index = rand() % 2;
+        m_scene.cubes.push_back(std::make_pair(c, material_index));
+    }
+
+    std::vector<PointLight> p_lights = {
+        {glm::vec3(0, 10, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0.5)},
+        {glm::vec3(10, 10, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 3)},
+        {glm::vec3(10, 10, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 3)},
+    };
+    m_scene.pointLights.reserve(p_lights.size());
+    for (const auto &pl : p_lights) {
+        m_scene.pointLights.push_back(pl);
+    }
+
+    std::vector<Material> materials = {
+        {glm::vec3(0.1, 0.35, 0.75), glm::vec3(0.7, 0.7, 0.7), glm::vec3(1), 20.f},
+        {glm::vec3(0.001, 0.001, 0.001), glm::vec3(1, 1, 1), glm::vec3(1), 100.f},
+    };
+    m_scene.materials.reserve(materials.size());
+    for (const auto &m : materials) {
+        m_scene.materials.push_back(m);
+    }
+}
+
+void SceneManager::initialize(GLuint computeShaderID)
+{
+    const GLchar* oNames[] = {"objects[0].c.min", "objects[0].c.max", "objects[0].c.transMat", "objects[0].material_index"};
+    const GLchar* mNames[] = {"materials[0].diffuse", "materials[0].specularity", "materials[0].emission", "materials[0].shininess"};
+    const GLchar* lNames[] = {"lights[0].pos_dir", "lights[0].color", "lights[0].attenuation"};
+
+    auto oIndices = new int[NumAttributesObjects + 1];
+    auto mIndices = new int[NumAttributesMaterial + 1];
+    auto lIndices = new int[NumAttributesLights];
+    m_oOffsets = new int[NumAttributesObjects + 1];
+    m_mOffsets = new int[NumAttributesMaterial + 1];
+    m_lOffsets = new int[NumAttributesLights];
+
+    const GLenum props[] = {GL_BUFFER_DATA_SIZE};
+    const GLenum props2[] = {GL_OFFSET};
+
+    // Get index (GLuint, not an offset) of each attribute (BUFFER_VARIABLE) relative to its struct
+    auto getIndices = [&](int length, const GLchar** const names, GLint* indices){
+        for (int i = 0; i < length; ++i) {
+            indices[i] = glGetProgramResourceIndex(computeShaderID, GL_BUFFER_VARIABLE, names[i]);
+        }
+    };
+
+    getIndices(NumAttributesObjects, oNames, oIndices);
+    getIndices(NumAttributesMaterial, mNames, mIndices);
+    getIndices(NumAttributesLights, lNames, lIndices);
+
+    // Get index (GLuint, not an offset) of each of the 3 buffers
+    m_oBlockIndex = glGetProgramResourceIndex(computeShaderID, GL_SHADER_STORAGE_BLOCK, "PrimitiveBuffer");
+    m_mBlockIndex = glGetProgramResourceIndex(computeShaderID, GL_SHADER_STORAGE_BLOCK, "MaterialBuffer");
+    m_lBlockIndex = glGetProgramResourceIndex(computeShaderID, GL_SHADER_STORAGE_BLOCK, "LightBuffer");
+
+    // Get offset in buffer for each attribute of one variable (e.g., objects[0].b.max == 1*sizeof(glm::vec3))
+    for (unsigned int i = 0; i < NumAttributesMaterial; ++i) {
+        glGetProgramResourceiv(computeShaderID, GL_BUFFER_VARIABLE, mIndices[i], 1, props2, 1, NULL, &m_mOffsets[i]);
+    }
+
+    for (unsigned int i = 0; i < NumAttributesObjects; ++i) {
+        glGetProgramResourceiv(computeShaderID, GL_BUFFER_VARIABLE, oIndices[i], 1, props2, 1, NULL, &m_oOffsets[i]);
+    }
+
+    for (unsigned int i = 0; i < NumAttributesLights; ++i) {
+        glGetProgramResourceiv(computeShaderID, GL_BUFFER_VARIABLE, lIndices[i], 1, props2, 1, NULL, &m_lOffsets[i]);
+    }
+
+    int oBlockSize = 0;
+    int mBlockSize = 0;
+    int lBlockSize = 0;
+    // Get size of one element in each buffer (one Light, one Object, etc.).
+    glGetProgramResourceiv(computeShaderID, GL_SHADER_STORAGE_BLOCK, m_oBlockIndex, 1, props, 1, NULL, &oBlockSize);
+    glGetProgramResourceiv(computeShaderID, GL_SHADER_STORAGE_BLOCK, m_mBlockIndex, 1, props, 1, NULL, &mBlockSize);
+    glGetProgramResourceiv(computeShaderID, GL_SHADER_STORAGE_BLOCK, m_lBlockIndex, 1, props, 1, NULL, &lBlockSize);
+
+    m_oAlignOffset = (oBlockSize%16 == 0 ? oBlockSize : oBlockSize-(oBlockSize%16)+16);
+    m_mAlignOffset = (mBlockSize%16 == 0 ? mBlockSize : mBlockSize-(mBlockSize%16)+16);
+    m_lAlignOffset = (lBlockSize%16 == 0 ? lBlockSize : lBlockSize-(lBlockSize%16)+16);
+}
+
+void SceneManager::uploadScenes(const std::vector<std::string> &filepaths, GLuint computeShaderID, GLuint* computeShaderstorageBufferIDs)
+{
+    initialize(computeShaderID);
+
+    // TODO: replace by loop over all filepaths to be parsed
+    std::cout << "Initializing scene..." << '\n';
+    this->readScene(filepaths[0]);
+    std::cout << "Starting scene upload..." << '\n';
+    this->uploadScene(computeShaderID, computeShaderstorageBufferIDs);
+    std::cout << "Completed scene upload.\n\n";
+}
+
+void SceneManager::uploadScene(GLuint computeShaderID, GLuint* computeShaderstorageBufferIDs)
+{
+    ////////////////////////////////////////////////////// LOADING OBJECTS //////////////////////////////////////////////////////
+    void* p = malloc(m_numObjInShader * m_oAlignOffset);
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, computeShaderstorageBufferIDs[0]);
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_numObjInShader * m_oAlignOffset, (void *)(p));
+
+    // Allocate a Shaderstorage buffer on the GPU memory
+    if (m_numObjInShader * m_oAlignOffset == 0) {
+        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numObjInShader + m_scene.numObjects()) * m_oAlignOffset, NULL, GL_DYNAMIC_DRAW);
+    } else {
+        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numObjInShader + m_scene.numObjects()) * m_oAlignOffset, p, GL_DYNAMIC_DRAW);
+        free(p);
+    }
+
+    if (m_scene.numObjects() != 0) {
+        // glMapBuffer is used to get a pointer to the GPU memory 
+        GLenum err;
+        while ((err = glGetError()) != GL_NO_ERROR) {
+            std::cerr << "OpenGL error: " << err << std::endl;
+        }
+        GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+
+        int type = 3;
+        for (const auto &c : m_scene.cubes) {
+            const auto matIdx = c.second + m_numMaterialsInShader;
+
+            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[0], &(c.first.min) , sizeof(glm::vec3));
+            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[1], &(c.first.max) , sizeof(glm::vec3));
+            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[2], &(c.first.transMat) , sizeof(glm::mat4));
+            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[3], &type , sizeof(int));
+            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[4], &(matIdx) , sizeof(int));
+            m_numObjInShader++;
+        }
+
+        glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        glShaderStorageBlockBinding(computeShaderID, m_oBlockIndex, 0);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    }
+
+    ////////////////////////////////////////////////////// LOADING MATERIALS //////////////////////////////////////////////////////
+    p = malloc(m_numMaterialsInShader * m_mAlignOffset);
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, computeShaderstorageBufferIDs[1]);
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_numMaterialsInShader * m_mAlignOffset, p);
+    if (m_numMaterialsInShader * m_mAlignOffset == 0) {
+        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numMaterialsInShader + m_scene.materials.size()) * m_mAlignOffset, NULL, GL_STATIC_DRAW);
+    } else {
+        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numMaterialsInShader + m_scene.materials.size()) * m_mAlignOffset, p, GL_STATIC_DRAW);
+        free(p);
+    }
+
+    if (!m_scene.materials.empty()) {
+        GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+
+        for (const auto &mt : m_scene.materials) {
+            memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[0], &(mt.diffuse) , sizeof(glm::vec3));
+            memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[1], &(mt.specularity) , sizeof(glm::vec3));
+            memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[2], &(mt.emission) , sizeof(glm::vec3));
+            memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[3], &(mt.shininess) , sizeof(float));
+            m_numMaterialsInShader++;
+        }
+
+        glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        glShaderStorageBlockBinding(computeShaderID, m_mBlockIndex, 1);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    }
+
+    ////////////////////////////////////////////////////// LOADING LIGHTS //////////////////////////////////////////////////////
+    p = malloc(m_numLightsInShader * m_lAlignOffset);
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, computeShaderstorageBufferIDs[2]);
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_numLightsInShader * m_lAlignOffset, p);
+    if (m_numLightsInShader * m_lAlignOffset == 0) {
+        glBufferData(GL_SHADER_STORAGE_BUFFER, m_scene.numLights() * m_lAlignOffset, NULL, GL_STATIC_DRAW);
+    } else {
+        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numLightsInShader + m_scene.numLights()) * m_lAlignOffset, p, GL_STATIC_DRAW);
+        free(p);
+    }
+
+    if (m_scene.numLights() != 0){
+        GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+
+        for (const auto &pl : m_scene.pointLights) {
+            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[0], &(pl.position) , sizeof(glm::vec3));
+            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[1], &(pl.color) , sizeof(glm::vec3));
+            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[2], &(pl.attenuation) , sizeof(glm::vec3));
+            m_numLightsInShader++;
+        }
+
+        for (const auto &dl : m_scene.directionalLights) {
+            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[0], &(dl.direction) , sizeof(glm::vec3));
+            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[1], &(dl.color) , sizeof(glm::vec3));
+            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[2], &(dl.attenuation) , sizeof(glm::vec3));
+            m_numLightsInShader++;
+        }
+
+        glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        glShaderStorageBlockBinding(computeShaderID, m_lBlockIndex, 2);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    }
+
+    auto uniID = glGetUniformLocation(computeShaderID, "numObj");
+    glUniform1f(uniID, m_numObjInShader);
+    uniID = glGetUniformLocation(computeShaderID, "numLights");
+    glUniform1f(uniID, m_numLightsInShader);
+}

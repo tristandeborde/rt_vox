@@ -11,22 +11,46 @@ struct Camera{
     float tanFovX;
 };
 
-struct box {
+struct Cube {
     vec3 min;
     vec3 max;
     mat4 transMat;
 };
 
-const box boxes[] = {
-    /* The ground */
-    {vec3(-5.0, -0.1, -5.0), vec3(5.0, 0.0, 5.0), mat4(1.0)},
-    /* box in the middle */
-    {vec3(-0.5, 0.0, -0.5), vec3(0.5, 1.0, 0.5), mat4(1.0)}
+struct Object{
+    Cube c;
+    int material_index;
 };
 
 struct hitinfo {
   float intersection_dist;
   int   bi;
+};
+
+//attenuation.w : 1 = Point light; 2 = Directional light
+struct Light{
+    vec4 pos_dir;
+    vec4 color;
+    vec4 attenuation;
+};
+
+struct Material{
+    vec4 diffuse;
+    vec4 specularity;
+    vec4 emission;
+    float shininess;
+};
+
+layout(std430) buffer PrimitiveBuffer{
+    Object objects[];
+};
+
+layout(std430) buffer MaterialBuffer{
+    Material materials[];
+};
+
+layout(std430) buffer LightBuffer{
+    Light lights[];
 };
 
 // The camera specification
@@ -55,7 +79,7 @@ float fabs(float f) {
     return (f > 0 ? f : -f);
 }
 
-bool intersectBox(vec3 ray_origin, vec3 ray_dir, const box b, inout float intersection_dist) {
+bool intersectBox(vec3 ray_origin, vec3 ray_dir, const Cube b, inout float intersection_dist) {
     // 4th vector in a transformation matrix is translation vector, here the center
     vec3 center = {b.transMat[3].x, b.transMat[3].y, b.transMat[3].z};
     vec3 delta = center - ray_origin;
@@ -145,7 +169,7 @@ bool intersectBoxes(vec3 origin, vec3 dir, out hitinfo info) {
     bool found = false;
     for (int i = 0; i < NUM_BOXES; i++) {
         float intersection_dist = 0.f;
-        if (intersectBox(origin, dir, boxes[i], intersection_dist)
+        if (intersectBox(origin, dir, objects[i].c, intersection_dist)
             && intersection_dist < smallest) {
             info.intersection_dist = intersection_dist;
             info.bi = i;

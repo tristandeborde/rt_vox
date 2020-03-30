@@ -14,7 +14,6 @@ int main(int ac, char **av)
     if (ac > 1)
         fn = ac > 1 ? std::string(av[1]) : "untitled";
 
-    std::vector<Cube>   cubes;
     // Octree oc(1000, 1000, 250, cubes);
     
     glm::vec3 pos(3.0f, 2.0f, 7.0f);
@@ -24,7 +23,7 @@ int main(int ac, char **av)
     
     OpenGL gl(WIDTH, HEIGHT);
 
-    Raytracer rt(cubes, &cam, &gl);
+    Raytracer rt(&cam, &gl);
     
     rt.mainLoop();
 

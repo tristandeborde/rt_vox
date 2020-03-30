@@ -5,10 +5,11 @@
 #include <iostream>
 #include <cassert>
 #include "Raytracer.Class.hpp"
+#include "SceneManager.Class.hpp"
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 
-Raytracer::Raytracer(std::vector<Cube> &c, Camera *cam, OpenGL *gl): _cubes(c), _camera(cam), _gl(gl) {
+Raytracer::Raytracer(Camera *cam, OpenGL *gl): _camera(cam), _gl(gl) {
     this->_width = 1280;
     this->_height = 1024;
     this->_maxRayDepth = 5;
@@ -25,6 +26,13 @@ Raytracer::Raytracer(std::vector<Cube> &c, Camera *cam, OpenGL *gl): _cubes(c), 
     this->_qShader->init();
     this->_cShader = new ShaderCompute();
     this->_cShader->init();
+
+    // SceneManager
+    std::vector<std::string> filepaths = {""};
+    _storageBufferIDs = new GLuint[3];
+    glGenBuffers(3, _storageBufferIDs);
+    SceneManager sceneManager;
+    sceneManager.uploadScenes(filepaths, _cShader->getID(), _storageBufferIDs);
 } 
 
 Raytracer::~Raytracer() {

@@ -12,10 +12,10 @@
 
 SRC :=  main.cpp \
 		glad.cpp \
-		Cube.Class.cpp \
 		Shader.Class.cpp \
 		ShaderCompute.Class.cpp \
 		ShaderQuad.Class.cpp \
 		Raytracer.Class.cpp \
 		OpenGL.Class.cpp \
-		Camera.Class.cpp
+		Camera.Class.cpp \
+		SceneManager.Class.cpp

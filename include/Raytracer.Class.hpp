@@ -3,7 +3,6 @@
 
 # include <string>
 # include <vector>
-# include "Cube.Class.hpp"
 # include "ShaderCompute.Class.hpp"
 # include "ShaderQuad.Class.hpp"
 # include "Camera.Class.hpp"
@@ -11,7 +10,7 @@
 class Raytracer
 {
 public:
-    Raytracer(std::vector<Cube >&c, Camera *cam, OpenGL *gl);
+    Raytracer(Camera *cam, OpenGL *gl);
     ~Raytracer();
     Raytracer() = delete;
     Raytracer(Raytracer &src) = delete;
@@ -25,8 +24,6 @@ public:
     static int      nextPowerOfTwo(unsigned int);
 
 private:
-    std::vector<Cube>  &_cubes;
-    
     // Raytracing attributes
     unsigned int        _width, _height;
     int                 _maxRayDepth;
@@ -44,9 +41,8 @@ private:
     GLuint          _vbo;
     GLuint          _tex;
     GLuint          _tex2;
+    GLuint          *_storageBufferIDs;
 
-    glm::vec3   computeDiffuse(const Cube *cube, const glm::vec3 &hit_point, const glm::vec3 &hit_normal);
-    glm::vec3   computeReflRefr(const Cube *cube, const glm::vec3 &hit_point, const glm::vec3 &hit_normal, const glm::vec3 &raydir, const int &depth, const bool &inside);
     void        quadFullScreenVao();
     void        createFramebufferTexture();
 };

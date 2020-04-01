@@ -70,6 +70,23 @@ void Shader::use()
     glUseProgram(this->_ID); 
 }
 
+void Shader::loadUniformVec3(GLuint shaderProgramID, const std::string& name, glm::vec3 v)
+{
+    auto uniID = glGetUniformLocation(shaderProgramID, name.c_str());
+
+    if (glGetError() != GL_NO_ERROR || uniID == -1) {
+        std::cerr << "ERROR: Could not get " + name + "-uniform-location!\n";
+        return;
+    }
+
+    glUniform3f(uniID, v.x, v.y, v.z);
+
+    if (glGetError() != GL_NO_ERROR) {
+        std::cerr << "ERROR: Could not update " + name + "-uniform-location!\n";
+        return;
+    }
+}
+
 // utility uniform functions
 void Shader::setBool(const std::string &name, bool value) const
 {         

@@ -41,6 +41,8 @@ public:
     void use();
     unsigned int getID(void) const;
 
+    static void loadUniformVec3(GLuint shaderProgramID, const std::string& name, glm::vec3 v);
+
 protected:
     unsigned int createShader(const char * filePath, int type);
     unsigned int _ID;

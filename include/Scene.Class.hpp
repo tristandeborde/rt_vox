@@ -1,8 +1,6 @@
 #ifndef SCENE_CLASS_HPP
 # define SCENE_CLASS_HPP
 
-# pragma once
-
 # include <vector>
 # include <glm/glm.hpp>
 
@@ -29,9 +27,9 @@ constexpr unsigned int NumAttributesLights = 3;
 //Alignment will be 16 bytes therefore take two vec4 vectors
 struct Cube
 {
+    glm::mat4 transMat;
     glm::vec3 min;
     glm::vec3 max;
-    glm::mat4 transMat;
 };
 
 struct Material

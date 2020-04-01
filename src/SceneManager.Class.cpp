@@ -14,9 +14,9 @@ void SceneManager::readScene(const std::string &filepath)
 
     std::vector<Cube> cubes = {
         /* The ground */
-        {glm::vec3(-5.0f, -0.1f, -5.0f), glm::vec3(5.0f, 0.0f, 5.0f), glm::mat4(1.0f)},
+        {glm::mat4(1.0f), glm::vec3(-5.0f, -0.1f, -5.0f), glm::vec3(5.0f, 0.0f, 5.0f)},
         /* Cube in the middle */
-        {glm::vec3(-0.5f, 0.0f, -0.5f), glm::vec3(0.5f, 1.0f, 0.5f), glm::mat4(1.0f)}
+        {glm::mat4(1.0f), glm::vec3(-0.5f, 0.0f, -0.5f), glm::vec3(0.5f, 1.0f, 0.5f)}
     };
     m_scene.cubes.reserve(cubes.size());
     for (const auto &c : cubes) {
@@ -46,7 +46,7 @@ void SceneManager::readScene(const std::string &filepath)
 
 void SceneManager::initialize(GLuint computeShaderID)
 {
-    const GLchar* oNames[] = {"objects[0].c.min", "objects[0].c.max", "objects[0].c.transMat", "objects[0].material_index"};
+    const GLchar* oNames[] = {"objects[0].c.transMat", "objects[0].c.min", "objects[0].c.max", "objects[0].material_index"};
     const GLchar* mNames[] = {"materials[0].diffuse", "materials[0].specularity", "materials[0].emission", "materials[0].shininess"};
     const GLchar* lNames[] = {"lights[0].pos_dir", "lights[0].color", "lights[0].attenuation"};
 
@@ -141,9 +141,9 @@ void SceneManager::uploadScene(GLuint computeShaderID, GLuint* computeShaderstor
         for (const auto &c : m_scene.cubes) {
             const auto matIdx = c.second + m_numMaterialsInShader;
 
-            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[0], &(c.first.min) , sizeof(glm::vec3));
-            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[1], &(c.first.max) , sizeof(glm::vec3));
-            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[2], &(c.first.transMat) , sizeof(glm::mat4));
+            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[0], &(c.first.transMat) , sizeof(glm::mat4));
+            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[1], &(c.first.min) , sizeof(glm::vec3));
+            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[2], &(c.first.max) , sizeof(glm::vec3));
             std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[4], &(matIdx) , sizeof(int));
             m_numObjInShader++;
         }

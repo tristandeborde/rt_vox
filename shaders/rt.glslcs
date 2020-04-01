@@ -12,9 +12,9 @@ struct Camera{
 };
 
 struct Cube {
+    mat4 transMat;
     vec3 min;
     vec3 max;
-    mat4 transMat;
 };
 
 struct Object{

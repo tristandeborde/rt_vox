@@ -11,19 +11,29 @@ struct Camera{
     float tanFovX;
 };
 
-struct Box {
+struct Cube {
+    mat4 transMat;
     vec3 min;
     vec3 max;
-    mat4 transMat;
+};
+
+struct Object{
+    Cube c;
     int material_index;
 };
 
-const Box boxes[] = {
-    /* The ground */
-    {vec3(-5.0, -0.1, -5.0), vec3(5.0, 0.0, 5.0), mat4(1.0), 1},
-    /* Box in the middle */
-    {vec3(-0.5, 0.0, -0.5), vec3(0.5, 1.0, 0.5), mat4(1.0), 1},
-    // TODO: Add Box with glass material
+//attenuation.w : 1 = Point light; 2 = Directional light
+struct Light{
+    vec4 pos_dir;
+    vec4 color;
+    vec4 attenuation;
+};
+
+struct Material{
+    vec4 diffuse;
+    vec4 specularity;
+    vec4 emission;
+    float shininess;
 };
 
 struct hitinfo {
@@ -45,8 +55,8 @@ struct Ray{
 };
 
 
-layout(std430) buffer BoxesBuffer{
-    Box boxes[];
+layout(std430) buffer PrimitiveBuffer{
+    Object objects[];
 };
 
 layout(std430) buffer MaterialBuffer{
@@ -145,7 +155,7 @@ int intersectBoxes(Ray r, out hitinfo info, out vec3 normal) {
 
     for (box_index = 0; box_index < NUM_BOXES; box_index++) {
         float intersection_dist = 0.f;
-        if (intersectBox(r, boxes[box_index], intersection_dist, normal)
+        if (intersectBox(r, objects[box_index], intersection_dist, normal)
             && intersection_dist < smallest) {
             info.intersection_dist = intersection_dist;
             info.bi = box_index; // TODO Remove cuz box_index already returned
@@ -160,8 +170,8 @@ vec4 calculateColor(Ray r, float t, int box_index, vec3 normal)
 {
     vec4 color = vec4(0);
     vec3 L, H;
-    int matIdx = boxes[box_index].material_index;
-    Box b = boxes[box_index];
+    int matIdx = objects[box_index].material_index;
+    Box b = objects[box_index];
 
     vec3 intersectionPoint = r.origin + t * r.dir;
     intersectionPoint += 0.01f * normal; // Why offset intersectionPoint along normal like this?

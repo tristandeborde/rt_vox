@@ -37,8 +37,9 @@ struct Material{
 };
 
 struct hitinfo {
-    float intersection_dist;
-    int   bi;
+    vec3    normal;
+    float   intersection_dist;
+    int     box_index;
 };
 
 struct planeinfo {
@@ -53,7 +54,6 @@ struct Ray{
     vec3 origin;
     vec3 dir;
 };
-
 
 layout(std430) buffer PrimitiveBuffer{
     Object objects[];
@@ -73,7 +73,7 @@ uniform uint width;
 uniform uint height;
 uniform uint reflectionDepth;
 
-#define MAX_SCENE_BOUNDS 100.0
+#define FAR_CLIP 100.0
 #define NUM_BOXES 2
 #define NUM_LIGHTS 1
 
@@ -95,15 +95,15 @@ float fabs(float f) {
     return (f > 0 ? f : -f);
 }
 
-bool intersectPlanes(const vec3 axis, const Box b, out planeinfo p_info, out vec3 normal) {
+bool intersectPlanes(const vec3 axis, const Cube c, inout planeinfo p_info, out vec3 normal) {
 	// Test intersection between ray and the 2 planes perpendicular to one OBB axis
     float swapped = 1.f;
 
-    if ( fabs(p_info.f) > 0.001f ) {
-        float t1 = (p_info.e + b.min[p_info.ax_index])/p_info.f; // Intersection with "left" (for xaxis) plane
-        float t2 = (p_info.e + b.max[p_info.ax_index])/p_info.f; // Intersection with "right" (for xaxis) plane
+    if (fabs(p_info.f) > 0.001f) {
+        float t1 = (p_info.e + c.min[p_info.ax_index])/p_info.f; // Intersection with "left" (for xaxis) plane
+        float t2 = (p_info.e + c.max[p_info.ax_index])/p_info.f; // Intersection with "right" (for xaxis) plane
         // We want t1 to be nearest intersection, so if it's not, invert t1 and t2
-        if (t1>t2) {
+        if (t1 > t2) {
             float tmp = t1;
             t1 = t2;
             t2 = tmp;
@@ -111,8 +111,7 @@ bool intersectPlanes(const vec3 axis, const Box b, out planeinfo p_info, out vec
         }
 
         p_info.tMax = t2 < p_info.tMax ? t2 : p_info.tMax; // Tmax = nearest "far" intersection
-        if (t1 > p_info.tMin) // Tmin = farthest "near" intersection
-        {
+        if (t1 > p_info.tMin) { // Tmin = farthest "near" intersection
             p_info.tMin = t1;
             normal = (swapped * axis);
         }
@@ -121,27 +120,27 @@ bool intersectPlanes(const vec3 axis, const Box b, out planeinfo p_info, out vec
         if (p_info.tMax < p_info.tMin)
             return false;
     }
-    else if(-p_info.e + b.min[p_info.ax_index] > 0.0f ||
-                -p_info.e + b.max[p_info.ax_index] < 0.0f) {
+    else if(-p_info.e + c.min[p_info.ax_index] > 0.0f ||
+                -p_info.e + c.max[p_info.ax_index] < 0.0f) {
         // Rare case : the ray is almost parallel to the planes, so they don't have any "intersection"
         return false;
     }
 } 
 
-bool intersectBox(Ray r, const Box b, inout float intersection_dist, inout vec3 normal) {
+bool intersectBox(Ray r, const Cube c, out float intersection_dist, out vec3 normal) {
     // https://www.opengl-tutorial.org/miscellaneous/clicking-on-objects/picking-with-custom-ray-obb-function/
 
     // 4th vector in a transformation matrix is translation vector, here the center
-    vec3 center = {b.transMat[3].x, b.transMat[3].y, b.transMat[3].z};
+    vec3 center = {c.transMat[3].x, c.transMat[3].y, c.transMat[3].z};
     vec3 delta = center - r.origin;
     planeinfo p_info = {0, 0.0f, 0.0f, 0.0f, 100000.0f};
 
     for (int ax_index = 0; ax_index < 3; ax_index++) {
-        vec3 axis = {b.transMat[ax_index].x, b.transMat[ax_index].y, b.transMat[ax_index].z};
-        p_info.e = dot(axis, delta);   // Projection of (center - ray_orig) on axis
+        vec3 axis = {c.transMat[ax_index].x, c.transMat[ax_index].y, c.transMat[ax_index].z};
+        p_info.e = dot(axis, delta); // Projection of (center - ray_orig) on axis
         p_info.f = dot(axis, r.dir); // Projection of ray on axis
         p_info.ax_index = ax_index;
-        if (!intersectPlanes(axis, b, p_info, normal))
+        if (!intersectPlanes(axis, c, p_info, normal))
             return false;
     }
 
@@ -149,32 +148,45 @@ bool intersectBox(Ray r, const Box b, inout float intersection_dist, inout vec3 
     return true;
 }
 
-int intersectBoxes(Ray r, out hitinfo info, out vec3 normal) {
-    int box_index;
-    float smallest = MAX_SCENE_BOUNDS;
+hitinfo intersectBoxes(Ray r) {
+    vec3    normal = {0.f, 0.f, 0.f};
+    float   intersection_dist = 0.f;
+    hitinfo h_info = {vec3(0.f), FAR_CLIP, 0};
 
-    for (box_index = 0; box_index < NUM_BOXES; box_index++) {
-        float intersection_dist = 0.f;
-        if (intersectBox(r, objects[box_index], intersection_dist, normal)
-            && intersection_dist < smallest) {
-            info.intersection_dist = intersection_dist;
-            info.bi = box_index; // TODO Remove cuz box_index already returned
-            smallest = intersection_dist;
+    for (int box_index = 0; box_index < NUM_BOXES; box_index++) {
+        if (intersectBox(r, objects[box_index].c, intersection_dist, normal)
+            && intersection_dist < h_info.intersection_dist) {
+            h_info.intersection_dist = intersection_dist;
+            h_info.box_index = box_index; // TODO Remove cuz box_index already returned
+            h_info.normal = normal;
         }
     }
-    return box_index;
+    return h_info;
 }
 
-// Comment, delete useless bitss on spheres and directional lights
+Ray getReflectionRay(Ray r, float t, int objIdx, vec3 normal)
+{
+    vec3 intersectionPoint = r.origin + r.dir * t;
+
+    // Compute Normal at intersection point
+    vec3 N = normalize(normal);
+
+    // Compute reflected direction vector along the normal
+    vec3 reflectedDir = normalize(r.dir - 2 * dot(r.dir, N) * N);
+
+    return Ray(intersectionPoint + reflectedDir * 0.01f, reflectedDir);
+}
+
+// Comment, delete useless bits on spheres and directional lights
 vec4 calculateColor(Ray r, float t, int box_index, vec3 normal)
 {
     vec4 color = vec4(0);
     vec3 L, H;
     int matIdx = objects[box_index].material_index;
-    Box b = objects[box_index];
+    Cube c = objects[box_index].c;
 
     vec3 intersectionPoint = r.origin + t * r.dir;
-    intersectionPoint += 0.01f * normal; // Why offset intersectionPoint along normal like this?
+    intersectionPoint += 0.01f * normal; // TODO: Find why offset intersectionPoint along normal like this
 
     for (int j = 0; j < NUM_LIGHTS; ++j) {
         int lightType = int(lights[j].attenuation.w);
@@ -194,32 +206,32 @@ vec4 calculateColor(Ray r, float t, int box_index, vec3 normal)
         Ray shadowRay = Ray(intersectionPoint, L);
         bool inShadow = false;
 
-        for (int i = 0; i < numObj; ++i) {
-            float temp, normal;
-            if (!intersectBox(shadowRay, objects[i].p, temp, normal))
-                continue
+        for (int i = 0; i < NUM_BOXES; ++i) {
+            float intersection_dist;
+            vec3 normal;
+            if (!intersectBox(shadowRay, objects[i].c, intersection_dist, normal))
+                continue;
 
             switch (lightType) {
                 //Point light
                 case 1:{
-                    if (temp < FAR_CLIP &&
-                        temp >= -0.001f &&
-                        temp < length(intersectionPoint - lights[j].pos_dir.xyz))
+                    if (intersection_dist < FAR_CLIP &&
+                        intersection_dist >= -0.001f &&
+                        intersection_dist < length(intersectionPoint - lights[j].pos_dir.xyz))
                     {
                         inShadow = true;
-                        i = int(numObj);
+                        i = int(NUM_BOXES);
                     }
                 } break;
 
                 //Directional light
                 case 2:{
-                    if (temp < FAR_CLIP && temp >= -0.001f) {
+                    if (intersection_dist < FAR_CLIP && intersection_dist >= -0.001f) {
                         inShadow = true;
-                        i = int(numObj);
+                        i = int(NUM_BOXES);
                     }
                 } break;
             }
-
         }
 
         if (!inShadow) {
@@ -260,26 +272,27 @@ void main(void) {
     if (pix.x >= size.x || pix.y >= size.y) {
         return;
     }
-    vec2 pos = vec2(pix) / vec2(size.x - 1, size.y - 1);
-    Ray r = initRay(pix.x, pix.y);
-    hitinfo info;
-    vec3 normal
+
+    hitinfo h_info;
+    vec4    color = vec4(0.f);
+    vec2    pos = vec2(pix) / vec2(size.x - 1, size.y - 1);
+    Ray     r = initRay(pix.x, pix.y);
 
     for (uint n = 0; n < reflectionDepth + 1; ++n) {
         float t = FAR_CLIP;
         // Check if the ray hit an object.
-        int box_index = intersectBoxes(camera.pos, ray, normal, info);
+        h_info = intersectBoxes(r);
 
         // If so compute Color at intersection otherwise exit early.
-        if (box_index != NUM_BOXES) {
-            vec4 tempColor = calculateColor(r, t, box_index, normal);
-            vec4 spec = materials[objects[box_index].material_index].specularity;
+        if (h_info.box_index != NUM_BOXES) {
+            vec4 tempColor = calculateColor(r, t, h_info.box_index, h_info.normal);
+            vec4 spec = materials[objects[h_info.box_index].material_index].specularity;
 
             // Check if material specularity is defined (i.e. spec != vec4(0))
             // If so compute reflection ray and continue loop otherwise exit early.
             if (dot(spec, spec) > 0.001){
                 color += spec * tempColor;
-                r = getReflectionRay(r, t, box_index);
+                r = getReflectionRay(r, t, h_info.box_index, h_info.normal);
             } else {
                 color += tempColor;
                 break;

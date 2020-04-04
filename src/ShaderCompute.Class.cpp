@@ -6,7 +6,7 @@ ShaderCompute::ShaderCompute()
     // create shader Program
     this->_ID = glCreateProgram();
     
-    int cshader = this->createShader("rt.glslcs", GL_COMPUTE_SHADER);
+    int cshader = this->createShader("rt.comp", GL_COMPUTE_SHADER);
 
     glAttachShader(this->_ID, cshader);
     glLinkProgram(this->_ID);

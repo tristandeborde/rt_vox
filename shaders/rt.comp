@@ -13,8 +13,8 @@ struct Camera{
 
 struct Cube {
     mat4 transMat;
-    vec3 min;
-    vec3 max;
+    vec4 min;
+    vec4 max;
 };
 
 struct Object{
@@ -95,9 +95,10 @@ float fabs(float f) {
     return (f > 0 ? f : -f);
 }
 
-bool intersectPlanes(const vec3 axis, const Cube c, inout planeinfo p_info, out vec3 normal) {
+bool intersectPlanes(const vec3 axis, int box_index, inout planeinfo p_info, out vec3 normal) {
 	// Test intersection between ray and the 2 planes perpendicular to one OBB axis
     float swapped = 1.f;
+    Cube c = objects[box_index].c;
 
     if (fabs(p_info.f) > 0.001f) {
         float t1 = (p_info.e + c.min[p_info.ax_index])/p_info.f; // Intersection with "left" (for xaxis) plane
@@ -126,22 +127,21 @@ bool intersectPlanes(const vec3 axis, const Cube c, inout planeinfo p_info, out 
         return false;
     }
     return true;
-} 
+}
 
-bool intersectBox(Ray r, const Cube c, out float intersection_dist, out vec3 normal) {
+bool intersectBox(Ray r, int box_index, out float intersection_dist, out vec3 normal) {
     // https://www.opengl-tutorial.org/miscellaneous/clicking-on-objects/picking-with-custom-ray-obb-function/
-
+    Cube c = objects[box_index].c;
     // 4th vector in a transformation matrix is translation vector, here the center
     vec3 center = {c.transMat[3].x, c.transMat[3].y, c.transMat[3].z};
-    vec3 delta = center - r.origin;
-    planeinfo p_info = {0, 0.0f, 0.0f, 0.0f, 100000.0f};
+    planeinfo p_info = {0, 0.f, 0.f, 0.f, 100000.0f};
 
     for (int ax_index = 0; ax_index < 3; ax_index++) {
-        vec3 axis = {c.transMat[ax_index].x, c.transMat[ax_index].y, c.transMat[ax_index].z};
-        p_info.e = dot(axis, delta); // Projection of (center - ray_orig) on axis
+        vec3 axis = {c.transMat[0][ax_index], c.transMat[1][ax_index], c.transMat[2][ax_index]};
+        p_info.e = dot(axis, center - r.origin); // Projection of (center - ray_orig) on axis
         p_info.f = dot(axis, r.dir); // Projection of ray on axis
         p_info.ax_index = ax_index;
-        if (!intersectPlanes(axis, c, p_info, normal))
+        if (!intersectPlanes(axis, box_index, p_info, normal))
             return false;
     }
 
@@ -150,15 +150,15 @@ bool intersectBox(Ray r, const Cube c, out float intersection_dist, out vec3 nor
 }
 
 hitinfo intersectBoxes(Ray r) {
-    vec3    normal = {0.f, 0.f, 0.f};
-    float   intersection_dist = 0.f;
+    vec3    normal;
+    float   intersection_dist;
     hitinfo h_info = {vec3(0.f), FAR_CLIP, NUM_BOXES};
 
     for (int box_index = 0; box_index < NUM_BOXES; box_index++) {
-        if (intersectBox(r, objects[box_index].c, intersection_dist, normal)
+        if (intersectBox(r, box_index, intersection_dist, normal)
             && intersection_dist < h_info.intersection_dist) {
             h_info.intersection_dist = intersection_dist;
-            h_info.box_index = box_index; // TODO Remove cuz box_index already returned
+            h_info.box_index = box_index;
             h_info.normal = normal;
         }
     }
@@ -210,7 +210,7 @@ vec4 calculateColor(Ray r, float t, int box_index, vec3 normal)
         for (int i = 0; i < NUM_BOXES; ++i) {
             float intersection_dist;
             vec3 normal;
-            if (!intersectBox(shadowRay, objects[i].c, intersection_dist, normal))
+            if (!intersectBox(shadowRay, i, intersection_dist, normal))
                 continue;
 
             switch (lightType) {

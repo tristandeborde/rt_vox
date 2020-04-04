@@ -13,8 +13,8 @@ struct Camera{
 
 struct Cube {
     mat4 transMat;
-    vec3 min;
-    vec3 max;
+    vec4 min;
+    vec4 max;
 };
 
 struct Object{

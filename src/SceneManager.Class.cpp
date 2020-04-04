@@ -11,12 +11,11 @@ void SceneManager::readScene(const std::string &filepath)
     auto data = reader.getData(); */
 
     srand(time(0));
-
     std::vector<Cube> cubes = {
         /* The ground */
-        {glm::mat4(1.0f), glm::vec3(-5.0f, -0.1f, -5.0f), glm::vec3(5.0f, 0.0f, 5.0f)},
+        {glm::mat4(1.f), glm::vec4(-5.0f, -0.1f, -5.0f, 1.f), glm::vec4(5.0f, 0.0f, 5.0f, 1.f)},
         /* Cube in the middle */
-        {glm::mat4(1.0f), glm::vec3(-0.5f, 0.0f, -0.5f), glm::vec3(0.5f, 1.0f, 0.5f)}
+        {glm::mat4(1.f), glm::vec4(-0.5f, 0.0f, -0.5f, 1.f), glm::vec4(0.5f, 1.0f, 0.5f, 1.f)}
     };
     m_scene.cubes.reserve(cubes.size());
     for (const auto &c : cubes) {
@@ -25,18 +24,19 @@ void SceneManager::readScene(const std::string &filepath)
     }
 
     std::vector<PointLight> p_lights = {
-        {glm::vec3(0, 10, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 0.5)},
-        {glm::vec3(10, 10, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 3)},
-        {glm::vec3(10, 10, 0), glm::vec3(1, 1, 1), glm::vec3(0, 0, 3)},
+        {glm::vec4(0.f, 10.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 1.f, 0.f), glm::vec4(0.f, 0.f, 0.5f, 1.f)},
+        {glm::vec4(10.f, 10.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 1.f, 0.f), glm::vec4(0.f, 0.f, 3.f, 1.f)},
+        {glm::vec4(10.f, 10.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 1.f, 0.f), glm::vec4(0.f, 0.f, 3.f, 1.f)},
     };
     m_scene.pointLights.reserve(p_lights.size());
     for (const auto &pl : p_lights) {
         m_scene.pointLights.push_back(pl);
     }
 
+    glm::vec4 emission = {1.f, 1.f, 1.f, 0.f};
     std::vector<Material> materials = {
-        {glm::vec3(0.1, 0.35, 0.75), glm::vec3(0.7, 0.7, 0.7), glm::vec3(1), 20.f},
-        {glm::vec3(0.001, 0.001, 0.001), glm::vec3(1, 1, 1), glm::vec3(1), 100.f},
+        {glm::vec4(0.1, 0.35, 0.75, 0.f), glm::vec4(0.7, 0.7, 0.7, 0.f), emission, 20.f},
+        {glm::vec4(0.001, 0.001, 0.001, 0.f), glm::vec4(1, 1, 1, 0.f), emission, 100.f},
     };
     m_scene.materials.reserve(materials.size());
     for (const auto &m : materials) {
@@ -76,7 +76,7 @@ void SceneManager::initialize(GLuint computeShaderID)
     m_mBlockIndex = glGetProgramResourceIndex(computeShaderID, GL_SHADER_STORAGE_BLOCK, "MaterialBuffer");
     m_lBlockIndex = glGetProgramResourceIndex(computeShaderID, GL_SHADER_STORAGE_BLOCK, "LightBuffer");
 
-    // Get offset in buffer for each attribute of one variable (e.g., objects[0].b.max == 1*sizeof(glm::vec3))
+    // Get offset in buffer for each attribute of one variable (e.g., objects[0].b.max == 1*sizeof(glm::vec4))
     for (unsigned int i = 0; i < NumAttributesMaterial; ++i) {
         glGetProgramResourceiv(computeShaderID, GL_BUFFER_VARIABLE, mIndices[i], 1, props2, 1, NULL, &m_mOffsets[i]);
     }
@@ -142,8 +142,8 @@ void SceneManager::uploadScene(GLuint computeShaderID, GLuint* computeShaderstor
             const auto matIdx = c.second + m_numMaterialsInShader;
 
             std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[0], &(c.first.transMat) , sizeof(glm::mat4));
-            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[1], &(c.first.min) , sizeof(glm::vec3));
-            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[2], &(c.first.max) , sizeof(glm::vec3));
+            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[1], &(c.first.min) , sizeof(glm::vec4));
+            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[2], &(c.first.max) , sizeof(glm::vec4));
             std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[4], &(matIdx) , sizeof(int));
             m_numObjInShader++;
         }
@@ -169,9 +169,9 @@ void SceneManager::uploadScene(GLuint computeShaderID, GLuint* computeShaderstor
         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 
         for (const auto &mt : m_scene.materials) {
-            memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[0], &(mt.diffuse) , sizeof(glm::vec3));
-            memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[1], &(mt.specularity) , sizeof(glm::vec3));
-            memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[2], &(mt.emission) , sizeof(glm::vec3));
+            memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[0], &(mt.diffuse) , sizeof(glm::vec4));
+            memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[1], &(mt.specularity) , sizeof(glm::vec4));
+            memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[2], &(mt.emission) , sizeof(glm::vec4));
             memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[3], &(mt.shininess) , sizeof(float));
             m_numMaterialsInShader++;
         }
@@ -197,16 +197,16 @@ void SceneManager::uploadScene(GLuint computeShaderID, GLuint* computeShaderstor
         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 
         for (const auto &pl : m_scene.pointLights) {
-            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[0], &(pl.position) , sizeof(glm::vec3));
-            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[1], &(pl.color) , sizeof(glm::vec3));
-            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[2], &(pl.attenuation) , sizeof(glm::vec3));
+            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[0], &(pl.position) , sizeof(glm::vec4));
+            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[1], &(pl.color) , sizeof(glm::vec4));
+            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[2], &(pl.attenuation) , sizeof(glm::vec4));
             m_numLightsInShader++;
         }
 
         for (const auto &dl : m_scene.directionalLights) {
-            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[0], &(dl.direction) , sizeof(glm::vec3));
-            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[1], &(dl.color) , sizeof(glm::vec3));
-            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[2], &(dl.attenuation) , sizeof(glm::vec3));
+            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[0], &(dl.direction) , sizeof(glm::vec4));
+            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[1], &(dl.color) , sizeof(glm::vec4));
+            memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[2], &(dl.attenuation) , sizeof(glm::vec4));
             m_numLightsInShader++;
         }
 

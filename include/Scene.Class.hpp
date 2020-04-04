@@ -9,16 +9,16 @@
 //Alignment: 16 bytes, therefore two vec4 vectors
 struct PointLight
 {
-    glm::vec3 position;
-    glm::vec3 color;
-    glm::vec3 attenuation;
+    glm::vec4 position;
+    glm::vec4 color;
+    glm::vec4 attenuation;
 };
 
 struct DirectionalLight
 {
-    glm::vec3 direction;
-    glm::vec3 color;
-    glm::vec3 attenuation;
+    glm::vec4 direction;
+    glm::vec4 color;
+    glm::vec4 attenuation;
 };
 // The number of attributes in the struct. No Reflection yet in C++.
 // Will be needed for uploading the scene in the SceneManager.
@@ -28,15 +28,15 @@ constexpr unsigned int NumAttributesLights = 3;
 struct Cube
 {
     glm::mat4 transMat;
-    glm::vec3 min;
-    glm::vec3 max;
+    glm::vec4 min;
+    glm::vec4 max;
 };
 
 struct Material
 {
-    glm::vec3   diffuse;
-    glm::vec3   specularity;
-    glm::vec3   emission;
+    glm::vec4   diffuse;
+    glm::vec4   specularity;
+    glm::vec4   emission;
     float       shininess;
 };
 constexpr unsigned int NumAttributesMaterial = 4;
@@ -50,7 +50,6 @@ constexpr unsigned int NumAttributesObjects = 4;
 
 struct Scene
 {
-    std::vector<glm::vec3> vertices;
     std::vector<std::pair<Cube, int>> cubes;
     std::vector<PointLight> pointLights;
     std::vector<DirectionalLight> directionalLights;
@@ -68,7 +67,6 @@ struct Scene
 
     void clear()
     {
-        vertices.clear();
         cubes.clear();
         pointLights.clear();
         directionalLights.clear();

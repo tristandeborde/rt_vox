@@ -125,6 +125,7 @@ bool intersectPlanes(const vec3 axis, const Cube c, inout planeinfo p_info, out 
         // Rare case : the ray is almost parallel to the planes, so they don't have any "intersection"
         return false;
     }
+    return true;
 } 
 
 bool intersectBox(Ray r, const Cube c, out float intersection_dist, out vec3 normal) {
@@ -151,7 +152,7 @@ bool intersectBox(Ray r, const Cube c, out float intersection_dist, out vec3 nor
 hitinfo intersectBoxes(Ray r) {
     vec3    normal = {0.f, 0.f, 0.f};
     float   intersection_dist = 0.f;
-    hitinfo h_info = {vec3(0.f), FAR_CLIP, 0};
+    hitinfo h_info = {vec3(0.f), FAR_CLIP, NUM_BOXES};
 
     for (int box_index = 0; box_index < NUM_BOXES; box_index++) {
         if (intersectBox(r, objects[box_index].c, intersection_dist, normal)

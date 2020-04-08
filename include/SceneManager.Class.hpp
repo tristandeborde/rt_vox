@@ -19,9 +19,10 @@ private:
     void readScene(const std::string &filepath);
     void uploadScene(GLuint computeShaderID, GLuint* computerShaderstorageBufferIDs);
 
-    unsigned int m_numObjInShader = 0;
-    unsigned int m_numMaterialsInShader = 0;
-    unsigned int m_numLightsInShader = 0;
+    unsigned int    m_numObjInShader = 0;
+    unsigned int    m_numMaterialsInShader = 0;
+    unsigned int    m_numLightsInShader = 0;
+    float    m_reflectionDepth = 100.0f;
 
     int m_oBlockIndex = 0;
     int m_mBlockIndex = 0;

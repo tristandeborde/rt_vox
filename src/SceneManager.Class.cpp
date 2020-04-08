@@ -14,8 +14,11 @@ void SceneManager::readScene(const std::string &filepath)
     std::vector<Cube> cubes = {
         /* The ground */
         {glm::mat4(1.f), glm::vec4(-5.0f, -0.1f, -5.0f, 1.f), glm::vec4(5.0f, 0.0f, 5.0f, 1.f)},
-        /* Cube in the middle */
-        {glm::mat4(1.f), glm::vec4(-0.5f, 0.0f, -0.5f, 1.f), glm::vec4(0.5f, 1.0f, 0.5f, 1.f)}
+        /* Smol Cubes */
+        {glm::mat4(1.f), glm::vec4(-0.5f, 0.0f, -0.5f, 1.f), glm::vec4(0.5f, 1.0f, 0.5f, 1.f)},
+        {glm::mat4(1.f), glm::vec4(-3.5f, 0.5f, 1.5f, 1.f), glm::vec4(-2.5f, 1.5f, 2.5f, 1.f)},
+        {glm::mat4(1.f), glm::vec4(-3.f, 2.0f, -3.8f, 1.f), glm::vec4(-2.f, 3.0f, -2.8f, 1.f)},
+        {glm::mat4(1.f), glm::vec4(-2.1f, 0.0f, -2.5f, 1.f), glm::vec4(-1.1f, 1.0f, -1.5f, 1.f)}
     };
     m_scene.cubes.reserve(cubes.size());
     for (const auto &c : cubes) {
@@ -25,7 +28,7 @@ void SceneManager::readScene(const std::string &filepath)
 
     std::vector<PointLight> p_lights = {
         {glm::vec4(0.f, 10.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 1.f, 0.f), glm::vec4(0.f, 0.f, 0.5f, 1.f)},
-        {glm::vec4(10.f, 10.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 1.f, 0.f), glm::vec4(0.f, 0.f, 3.f, 1.f)},
+        {glm::vec4(10.f, -10.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 1.f, 0.f), glm::vec4(0.f, 0.f, 3.f, 1.f)},
         {glm::vec4(10.f, 10.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 1.f, 0.f), glm::vec4(0.f, 0.f, 3.f, 1.f)},
     };
     m_scene.pointLights.reserve(p_lights.size());
@@ -33,10 +36,11 @@ void SceneManager::readScene(const std::string &filepath)
         m_scene.pointLights.push_back(pl);
     }
 
-    glm::vec4 emission = {1.f, 1.f, 1.f, 0.f};
+    glm::vec4 emission_pos = {0.4f, 0.3f, 0.1f, 1.f};
+    glm::vec4 emission_neg = {0.f, 0.f, 0.f, 0.f};
     std::vector<Material> materials = {
-        {glm::vec4(0.1, 0.35, 0.75, 0.f), glm::vec4(0.7, 0.7, 0.7, 0.f), emission, 20.f},
-        {glm::vec4(0.001, 0.001, 0.001, 0.f), glm::vec4(1, 1, 1, 0.f), emission, 100.f},
+        {glm::vec4(0.1, 0.35, 0.75, 0.f), glm::vec4(0.7, 0.7, 0.7, 0.f), emission_pos, 20.f},
+        {glm::vec4(0.001, 0.001, 0.001, 0.f), glm::vec4(1, 1, 1, 0.f), emission_neg, 100.f},
     };
     m_scene.materials.reserve(materials.size());
     for (const auto &m : materials) {
@@ -215,8 +219,11 @@ void SceneManager::uploadScene(GLuint computeShaderID, GLuint* computeShaderstor
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
+    // TODO: use these in rt.comp
     auto uniID = glGetUniformLocation(computeShaderID, "numObj");
     glUniform1f(uniID, m_numObjInShader);
     uniID = glGetUniformLocation(computeShaderID, "numLights");
     glUniform1f(uniID, m_numLightsInShader);
+    uniID = glGetUniformLocation(computeShaderID, "reflectionDepth");
+    glUniform1f(uniID, m_reflectionDepth);
 }

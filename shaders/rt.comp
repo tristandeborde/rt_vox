@@ -74,8 +74,8 @@ uniform uint height;
 uniform uint reflectionDepth;
 
 #define FAR_CLIP 100.0
-#define NUM_BOXES 2
-#define NUM_LIGHTS 1
+#define NUM_BOXES 5
+#define NUM_LIGHTS 3
 
 // Initialize the primary ray for pixel x, y
 Ray initRay(uint x, uint y)
@@ -97,7 +97,7 @@ float fabs(float f) {
 
 bool intersectPlanes(const vec3 axis, int box_index, inout planeinfo p_info, out vec3 normal) {
 	// Test intersection between ray and the 2 planes perpendicular to one OBB axis
-    float swapped = 1.f;
+    float swapped = -1.f;
     Cube c = objects[box_index].c;
 
     if (fabs(p_info.f) > 0.001f) {
@@ -108,13 +108,13 @@ bool intersectPlanes(const vec3 axis, int box_index, inout planeinfo p_info, out
             float tmp = t1;
             t1 = t2;
             t2 = tmp;
-            swapped = -1.f; // Used to invert the normal (~ choose opposite cube face)
+            swapped = 1.f; // Used to invert the normal (~ choose opposite cube face)
         }
 
         p_info.tMax = t2 < p_info.tMax ? t2 : p_info.tMax; // Tmax = nearest "far" intersection
         if (t1 > p_info.tMin) { // Tmin = farthest "near" intersection
             p_info.tMin = t1;
-            normal = (swapped * axis);
+            normal = normalize(swapped * axis);
         }
 
         // The trick : if "far" is closer than "near", then there is NO intersection.
@@ -178,7 +178,6 @@ Ray getReflectionRay(Ray r, float t, int objIdx, vec3 normal)
     return Ray(intersectionPoint + reflectedDir * 0.01f, reflectedDir);
 }
 
-// Comment, delete useless bits on spheres and directional lights
 vec4 calculateColor(Ray r, float t, int box_index, vec3 normal)
 {
     vec4 color = vec4(0);
@@ -207,10 +206,10 @@ vec4 calculateColor(Ray r, float t, int box_index, vec3 normal)
         Ray shadowRay = Ray(intersectionPoint, L);
         bool inShadow = false;
 
-        for (int i = 0; i < NUM_BOXES; ++i) {
+        for (int i = 0; i < NUM_BOXES; i++) {
             float intersection_dist;
-            vec3 normal;
-            if (!intersectBox(shadowRay, i, intersection_dist, normal))
+            vec3 normal_shadow;
+            if (!intersectBox(shadowRay, i, intersection_dist, normal_shadow))
                 continue;
 
             switch (lightType) {
@@ -244,8 +243,7 @@ vec4 calculateColor(Ray r, float t, int box_index, vec3 normal)
                                 lights[j].attenuation.y * dist +
                                 lights[j].attenuation.z * dist * dist * 0.01f);
 
-                // Check if the object has a material.
-                // If not use default values to compute color.
+                // Check if object has a material, otherwise use default values
                 if (matIdx != -1) {
                     vec3 phong = materials[matIdx].diffuse.xyz * dot(normal, L) +
                                     materials[matIdx].specularity.xyz * pow(max(dot(-normal,H), 0), materials[matIdx].shininess);
@@ -283,9 +281,11 @@ void main(void) {
         float t = FAR_CLIP;
         // Check if the ray hit an object.
         h_info = intersectBoxes(r);
+        if(h_info.intersection_dist < t && h_info.intersection_dist >= -0.001f)
+            t = h_info.intersection_dist;
 
         // If so compute Color at intersection otherwise exit early.
-        if (h_info.box_index != NUM_BOXES) {
+        if (h_info.box_index != NUM_BOXES && t < FAR_CLIP) {
             vec4 tempColor = calculateColor(r, t, h_info.box_index, h_info.normal);
             vec4 spec = materials[objects[h_info.box_index].material_index].specularity;
 

@@ -73,6 +73,7 @@ uniform uint width;
 uniform uint height;
 uniform uint reflectionDepth;
 
+// TODO: replace by uniforms
 #define FAR_CLIP 100.0
 #define NUM_BOXES 5
 #define NUM_LIGHTS 3

@@ -102,7 +102,7 @@ bool intersectPlanes(const vec3 axis, int box_index, inout planeinfo p_info, out
     float swapped = -1.f;
     Cube c = objects[box_index].c;
 
-    if (fabs(p_info.f) > 0.001f) {
+    if (fabs(p_info.f) > 0.000001f) {
         float t1 = (p_info.e + c.min[p_info.ax_index])/p_info.f; // Intersection with "left" (for xaxis) plane
         float t2 = (p_info.e + c.max[p_info.ax_index])/p_info.f; // Intersection with "right" (for xaxis) plane
         // We want t1 to be nearest intersection, so if it's not, invert t1 and t2

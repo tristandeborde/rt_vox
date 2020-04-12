@@ -36,11 +36,10 @@ void SceneManager::readScene(const std::string &filepath)
         m_scene.pointLights.push_back(pl);
     }
 
-    glm::vec4 emission_pos = {0.4f, 0.3f, 0.1f, 1.f};
     glm::vec4 emission_neg = {0.f, 0.f, 0.f, 0.f};
     std::vector<Material> materials = {
-        {glm::vec4(0.1, 0.35, 0.75, 0.f), glm::vec4(0.7, 0.7, 0.7, 0.f), emission_pos, 20.f},
-        {glm::vec4(0.001, 0.001, 0.001, 0.f), glm::vec4(1, 1, 1, 0.f), emission_neg, 100.f},
+        {glm::vec4(0.1, 0.35, 0.75, 0.f), glm::vec4(0.7, 0.7, 0.7, 0.f), emission_neg, 20.f},
+        {glm::vec4(0.1, 0.35, 0.75, 0.f), glm::vec4(1, 1, 1, 0.f), emission_neg, 100.f},
     };
     m_scene.materials.reserve(materials.size());
     for (const auto &m : materials) {
@@ -220,10 +219,11 @@ void SceneManager::uploadScene(GLuint computeShaderID, GLuint* computeShaderstor
     }
 
     // TODO: use these in rt.comp
+    glUseProgram(computeShaderID);
     auto uniID = glGetUniformLocation(computeShaderID, "numObj");
-    glUniform1f(uniID, m_numObjInShader);
+    glUniform1ui(uniID, m_numObjInShader);
     uniID = glGetUniformLocation(computeShaderID, "numLights");
-    glUniform1f(uniID, m_numLightsInShader);
+    glUniform1ui(uniID, m_numLightsInShader);
     uniID = glGetUniformLocation(computeShaderID, "reflectionDepth");
-    glUniform1f(uniID, m_reflectionDepth);
+    glUniform1ui(uniID, m_reflectionDepth);
 }

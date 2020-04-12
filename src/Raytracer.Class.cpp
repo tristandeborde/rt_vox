@@ -28,11 +28,10 @@ Raytracer::Raytracer(Camera *cam, OpenGL *gl): _camera(cam), _gl(gl) {
     this->_cShader->init();
 
     // SceneManager
-    std::vector<std::string> filepaths = {""};
     _storageBufferIDs = new GLuint[3];
     glGenBuffers(3, _storageBufferIDs);
     SceneManager sceneManager;
-    sceneManager.uploadScenes(filepaths, _cShader->getID(), _storageBufferIDs);
+    sceneManager.uploadScenes({""}, _cShader->getID(), _storageBufferIDs);
 }
 
 Raytracer::~Raytracer() {

@@ -31,6 +31,9 @@ void ShaderCompute::init() {
     this->_camTanFovYUniform = glGetUniformLocation(this->_ID, "camera.tanFovY");
     this->_widthUniform = glGetUniformLocation(this->_ID, "width");
     this->_heightUniform = glGetUniformLocation(this->_ID, "height");
+    this->_numObj = glGetUniformLocation(this->_ID, "numObj");
+    this->_numLights = glGetUniformLocation(this->_ID, "numLights");
+    this->_reflectionDepth = glGetUniformLocation(this->_ID, "reflectionDepth");
     glUseProgram(0);
 }
 

@@ -15,6 +15,9 @@ private:
     int _camTanFovYUniform;
     int _widthUniform;
     int _heightUniform;
+    int _numObj;
+    int _numLights;
+    int _reflectionDepth;
 
 public:
     ShaderCompute();

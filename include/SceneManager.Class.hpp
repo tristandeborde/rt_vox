@@ -22,7 +22,7 @@ private:
     unsigned int    m_numObjInShader = 0;
     unsigned int    m_numMaterialsInShader = 0;
     unsigned int    m_numLightsInShader = 0;
-    float    m_reflectionDepth = 100.0f;
+    unsigned int    m_reflectionDepth = 5;
 
     int m_oBlockIndex = 0;
     int m_mBlockIndex = 0;

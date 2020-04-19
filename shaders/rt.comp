@@ -135,11 +135,11 @@ bool intersectBox(Ray r, int box_index, out float intersection_dist, out vec3 no
     // https://www.opengl-tutorial.org/miscellaneous/clicking-on-objects/picking-with-custom-ray-obb-function/
     Cube c = objects[box_index].c;
     // 4th vector in a transformation matrix is translation vector, here the center
-    vec3 center = {c.transMat[3].x, c.transMat[3].y, c.transMat[3].z};
+    vec3 center = c.transMat[3].xyz;
     planeinfo p_info = {0, 0.f, 0.f, 0.f, 100000.0f};
 
     for (int ax_index = 0; ax_index < 3; ax_index++) {
-        vec3 axis = {c.transMat[0][ax_index], c.transMat[1][ax_index], c.transMat[2][ax_index]};
+        vec3 axis = c.transMat[ax_index].xyz;
         p_info.e = dot(axis, center - r.origin); // Projection of (center - ray_orig) on axis
         p_info.f = dot(axis, r.dir); // Projection of ray on axis
         p_info.ax_index = ax_index;

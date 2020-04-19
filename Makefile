@@ -22,15 +22,15 @@ SRC_FILES = $(addprefix src/,$(SRC))
 OBJ := $(subst src,.obj,$(subst .cpp,.o,$(SRC_FILES)))
 
 CXX := g++
-CXXINCLUDE := -I include 
-CXXFLAGS := -g -Wall -Wextra -Werror -std=c++11
+CXXINCLUDE := -I include -I /usr/include/bullet/
+CXXFLAGS := -g -Wall -Wextra -Werror -std=c++11 -DBT_USE_DOUBLE_PRECISION=1
 CXXIGNORE := -Wno-unreachable-code-return -Wno-unused-function \
 			-Wno-reserved-id-macro -Wno-unused-parameter
 CXX_FLAGS_DEPS := -MD
 
-CXXSRC := $(CXXINCLUDE) $(CXXFLAGS) $(CXXIGNORE) $(CXX_FLAGS_DEPS) -D BASEPATH=\"$(BASEPATH)\"
+CXXSRC := $(CXXINCLUDE) $(CXXFLAGS) $(CXXIGNORE) $(CXX_FLAGS_DEPS) $(BULLETFLAGS) -D BASEPATH=\"$(BASEPATH)\"
 
-LIB := -ldl -lglfw
+LIB := -ldl -lglfw -lBulletDynamics -lBulletCollision -lLinearMath
 
 
 all : $(NAME)

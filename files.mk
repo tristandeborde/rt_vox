@@ -18,4 +18,5 @@ SRC :=  main.cpp \
 		Raytracer.Class.cpp \
 		OpenGL.Class.cpp \
 		Camera.Class.cpp \
+		PhysicsEngine.cpp \
 		SceneManager.Class.cpp

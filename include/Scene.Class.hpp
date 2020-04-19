@@ -20,9 +20,6 @@ struct DirectionalLight
     glm::vec4 color;
     glm::vec4 attenuation;
 };
-// The number of attributes in the struct. No Reflection yet in C++.
-// Will be needed for uploading the scene in the SceneManager.
-constexpr unsigned int NumAttributesLights = 3;
 
 //Alignment will be 16 bytes therefore take two vec4 vectors
 struct Cube
@@ -39,35 +36,41 @@ struct Material
     glm::vec4   emission;
     float       shininess;
 };
-constexpr unsigned int NumAttributesMaterial = 4;
 
 struct Object
 {
     Cube c;
     int material_index;
+    float mass;
 };
-constexpr unsigned int NumAttributesObjects = 4;
 
 struct Scene
 {
-    std::vector<std::pair<Cube, int>> cubes;
+    std::vector<Object> objects; // TODO ! Not init'd with objects
     std::vector<PointLight> pointLights;
     std::vector<DirectionalLight> directionalLights;
     std::vector<Material> materials;
 
-    int numObjects()
+    // The number of attributes in the struct. No Reflection yet in C++.
+    // Will be needed for uploading the scene in the SceneManager.
+    static const unsigned int m_NumAttributesLights = 3;
+    static const unsigned int m_NumAttributesMaterial = 4;
+    static const unsigned int m_NumAttributesObjects = 4;
+
+
+    unsigned int numObjects()
     {
-        return cubes.size();
+        return objects.size();
     }
 
-    int numLights()
+    unsigned int numLights()
     {
         return pointLights.size() + directionalLights.size();
     }
 
     void clear()
     {
-        cubes.clear();
+        objects.clear();
         pointLights.clear();
         directionalLights.clear();
         materials.clear();

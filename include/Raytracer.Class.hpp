@@ -22,6 +22,7 @@ public:
     // Utility funcs
     static float    mix(const float &a, const float &b, const float &mix);
     static int      nextPowerOfTwo(unsigned int);
+    GLuint getComputeShaderID();
 
 private:
     // Raytracing attributes

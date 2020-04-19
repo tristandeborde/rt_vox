@@ -26,12 +26,7 @@ Raytracer::Raytracer(Camera *cam, OpenGL *gl): _camera(cam), _gl(gl) {
     this->_qShader->init();
     this->_cShader = new ShaderCompute();
     this->_cShader->init();
-
-    // SceneManager
-    _storageBufferIDs = new GLuint[3];
-    glGenBuffers(3, _storageBufferIDs);
-    SceneManager sceneManager;
-    sceneManager.uploadScenes({""}, _cShader->getID(), _storageBufferIDs);
+    _cShader->use();
 }
 
 Raytracer::~Raytracer() {
@@ -39,26 +34,6 @@ Raytracer::~Raytracer() {
     delete this->_cShader;
     return;
 }
-
-void    Raytracer::mainLoop(){
-
-    GLFWwindow *win = this->_gl->getWindow();
-
-    while (win && !glfwWindowShouldClose(win))
-    {
-        this->_gl->updateInput();
-        this->_camera->update(*this->_gl, 0.1f);
-
-        this->render_GPU();
-        // TODO: rasterize_objects();
-
-        glfwSwapBuffers(win);
-    }
-
-    // Clear all allocated GLFW resources.
-    glfwTerminate();
-}
-
 
 void Raytracer::render_GPU(void) {
     this->_cShader->use();
@@ -149,4 +124,8 @@ int  Raytracer::nextPowerOfTwo(unsigned int x){
     x |= x >> 16; // handle 32 bit numbers
     x++;
     return x;
+}
+
+GLuint Raytracer::getComputeShaderID(){
+    return _cShader->getID();
 }

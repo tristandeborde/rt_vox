@@ -12,13 +12,21 @@
 class SceneManager
 {
 public:
-    void uploadScenes(const std::vector<std::string> &filepaths, GLuint computeShaderID, GLuint* computerShaderstorageBufferIDs);
+    SceneManager(GLuint computeShaderID);
+    ~SceneManager();
+    SceneManager() = delete;
+    SceneManager(SceneManager &) = delete;
+    SceneManager &operator=(SceneManager &) = delete;
+
+    void readScene();
+    void uploadScene();
+    Scene &getScene();
+    void uploadObjects();
 
 private:
-    void initialize(GLuint computerShaderID);
-    void readScene(const std::string &filepath);
-    void uploadScene(GLuint computeShaderID, GLuint* computerShaderstorageBufferIDs);
-
+    void initialize();
+    GLuint          m_computeShaderID;
+    GLuint          *m_storageBufferIDs;
     unsigned int    m_numObjInShader = 0;
     unsigned int    m_numMaterialsInShader = 0;
     unsigned int    m_numLightsInShader = 0;
@@ -37,6 +45,10 @@ private:
     int *m_lOffsets = nullptr;
 
     Scene m_scene;
+
+    void uploadMaterials();
+    void uploadLights();
+
 };
 
 #endif

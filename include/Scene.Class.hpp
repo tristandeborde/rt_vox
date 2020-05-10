@@ -46,7 +46,7 @@ struct Object
 
 struct Scene
 {
-    std::vector<Object> objects; // TODO ! Not init'd with objects
+    std::vector<Object> objects;
     std::vector<PointLight> pointLights;
     std::vector<DirectionalLight> directionalLights;
     std::vector<Material> materials;

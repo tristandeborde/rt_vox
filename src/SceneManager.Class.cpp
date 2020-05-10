@@ -122,22 +122,23 @@ void SceneManager::uploadScene()
 void SceneManager::uploadObjects() {
     ////////////////////////////////////////////////////// LOADING OBJECTS //////////////////////////////////////////////////////
     void* p = malloc(m_numObjInShader * m_oAlignOffset);
-    bool to_extend = m_numObjInShader < m_scene.numObjects() ? true : false;
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_storageBufferIDs[0]);
     // Copy *existing* buffer data from GPU to CPU
     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_numObjInShader * m_oAlignOffset, (void *)(p));
 
     // Allocate a Shaderstorage buffer on the GPU memory
-    // if (!to_extend || m_numObjInShader == 0) {
-    glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numObjInShader + m_scene.numObjects()) * m_oAlignOffset, NULL, GL_DYNAMIC_DRAW);
-    // } else {
-    //     // Copy back buffer data to GPU, but in a bigger buffer to store new objects
-    //     glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numObjInShader + m_scene.numObjects()) * m_oAlignOffset, p, GL_DYNAMIC_DRAW);
-    //     free(p);
-    // }
+    if (m_numObjInShader == 0) {
+        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numObjInShader + m_scene.numObjects()) * m_oAlignOffset, NULL, GL_DYNAMIC_DRAW);
+    }
+    else if (m_numObjInShader != m_scene.numObjects()) {
+        // Copy back buffer data to GPU, but in a bigger buffer to store new objects
+        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numObjInShader + m_scene.numObjects()) * m_oAlignOffset, p, GL_DYNAMIC_DRAW);
+        free(p);
+    }
 
     if (m_scene.numObjects() != 0) {
+        m_numObjInShader = 0;
         // glMapBuffer is used to get a pointer to the GPU memory 
         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 
@@ -146,8 +147,7 @@ void SceneManager::uploadObjects() {
             std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[1], &(obj.c.min) , sizeof(glm::vec4));
             std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[2], &(obj.c.max) , sizeof(glm::vec4));
             std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[4], &(obj.material_index) , sizeof(int));
-            if (to_extend) 
-                m_numObjInShader++;
+            m_numObjInShader++;
         }
 
         glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);

@@ -56,7 +56,7 @@ int main(int ac, char **av)
     sm.readScene(); // TODO: parser to read .obj files directly
     
     // Real g: -9.80665
-    PhysicsEngine phys(0);
+    PhysicsEngine phys(-9.80665);
     phys.addObjects(sm.getScene());
 
     mainLoop(rt, gl, cam, phys, sm);

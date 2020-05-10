@@ -21,8 +21,8 @@ PhysicsEngine::~PhysicsEngine() {
 }
 
 void PhysicsEngine::addObjects(Scene &sc) {
-    for (auto cube: sc.cubes) {
-        glm::vec4 origin = cube.first.transMat[3];
+    for (auto obj: sc.objects) {
+        glm::vec4 origin = obj.c.transMat[3];
         // TODO: choose mass from "Object" instance (for now its just "Cube")
         m_btBoxes.push_back(addBox(origin.x, origin.y, origin.z, 1));
     }
@@ -45,9 +45,8 @@ btRigidBody *PhysicsEngine::addBox(float x, float y, float z, float mass) {
 }
 
 void PhysicsEngine::step(Scene &sc, double last_update) {
-    for (unsigned long i = 0; i < sc.cubes.size(); i++)
-        this->updateBox(m_btBoxes[i], sc.cubes[i].first);
-
+    for (unsigned long i = 0; i < sc.objects.size(); i++)
+        this->updateBox(m_btBoxes[i], sc.objects[i].c);
     double step_time = (clock() - last_update) / (double) CLOCKS_PER_SEC;
     m_world->stepSimulation(step_time);
 }

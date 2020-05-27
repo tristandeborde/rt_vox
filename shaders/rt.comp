@@ -103,8 +103,8 @@ bool intersectPlanes(const vec3 axis, int box_index, inout planeinfo p_info, out
     Cube c = objects[box_index].c;
 
     if (fabs(p_info.f) > 0.000001f) {
-        float t1 = (p_info.e + c.min[p_info.ax_index])/p_info.f; // Intersection with "left" (for xaxis) plane
-        float t2 = (p_info.e + c.max[p_info.ax_index])/p_info.f; // Intersection with "right" (for xaxis) plane
+        float t1 = (p_info.e + c.min[p_info.ax_index] + c.transMat[3][p_info.ax_index])/p_info.f; // Intersection with "left" (for xaxis) plane
+        float t2 = (p_info.e + c.max[p_info.ax_index] + c.transMat[3][p_info.ax_index])/p_info.f; // Intersection with "right" (for xaxis) plane
         // We want t1 to be nearest intersection, so if it's not, invert t1 and t2
         if (t1 > t2) {
             float tmp = t1;
@@ -123,8 +123,8 @@ bool intersectPlanes(const vec3 axis, int box_index, inout planeinfo p_info, out
         if (p_info.tMax < p_info.tMin)
             return false;
     }
-    else if(-p_info.e + c.min[p_info.ax_index] > 0.0f ||
-                -p_info.e + c.max[p_info.ax_index] < 0.0f) {
+    else if(-p_info.e + c.min[p_info.ax_index] + c.transMat[3][p_info.ax_index] > 0.0f ||
+                -p_info.e + c.max[p_info.ax_index] + c.transMat[3][p_info.ax_index] < 0.0f) {
         // Rare case : the ray is almost parallel to the planes, so they don't have any "intersection"
         return false;
     }
@@ -135,11 +135,11 @@ bool intersectBox(Ray r, int box_index, out float intersection_dist, out vec3 no
     // https://www.opengl-tutorial.org/miscellaneous/clicking-on-objects/picking-with-custom-ray-obb-function/
     Cube c = objects[box_index].c;
     // 4th vector in a transformation matrix is translation vector, here the center
-    vec3 center = c.transMat[3].xyz;
+    vec3 center = {0.f, 0.f, 0.f};
     planeinfo p_info = {0, 0.f, 0.f, 0.f, 100000.0f};
 
     for (int ax_index = 0; ax_index < 3; ax_index++) {
-        vec3 axis = c.transMat[ax_index].xyz;
+        vec3 axis = c.transMat[ax_index].xyz; 
         p_info.e = dot(axis, center - r.origin); // Projection of (center - ray_orig) on axis
         p_info.f = dot(axis, r.dir); // Projection of ray on axis
         p_info.ax_index = ax_index;

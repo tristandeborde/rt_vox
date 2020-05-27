@@ -23,25 +23,30 @@ PhysicsEngine::~PhysicsEngine() {
 void PhysicsEngine::addObjects(Scene &sc) {
     for (auto obj: sc.objects) {
         glm::vec4 origin = obj.c.transMat[3];
+        glm::vec4 size = (obj.c.max - obj.c.min) / 2.f;
         // TODO: choose mass from "Object" instance (for now its just "Cube")
-        m_btBoxes.push_back(addBox(origin.x, origin.y, origin.z, 1));
+        addBox(origin.x, origin.y, origin.z, obj.mass, size);
     }
 }
 
-btRigidBody *PhysicsEngine::addBox(float x, float y, float z, float mass) {
+void PhysicsEngine::addBox(float x, float y, float z, float mass, glm::vec4 size) {
     btTransform t;
     t.setIdentity();
     t.setOrigin(btVector3(x, y, z));
 
-    btBoxShape *box = new btBoxShape(btVector3(1.0, 1.0, 1.0));
+    btBoxShape *box = new btBoxShape(btVector3(size[0], size[1], size[2]));
     btVector3 inertia(0, 0, 0);
-    if (mass != 0.0)
+
+    if (mass != 0.0) {
         box->calculateLocalInertia(mass, inertia);
+    }
 
     btMotionState *state = new btDefaultMotionState(t);
-    btRigidBody::btRigidBodyConstructionInfo info(0.0, state, box, inertia);
+    btRigidBody::btRigidBodyConstructionInfo info(mass, state, box, inertia);
     btRigidBody *body = new btRigidBody(info);
-    return body;
+
+    m_btBoxes.push_back(body);
+    m_world->addRigidBody(body, 1, 1);
 }
 
 void PhysicsEngine::step(Scene &sc, double last_update) {
@@ -56,7 +61,8 @@ void PhysicsEngine::updateBox(btRigidBody *bt_box, Cube &cube) {
     // Get rotation and translation in quaternion form
     bt_box->getMotionState()->getWorldTransform(t);
     // Convert quaternion to transMat
-    btScalar bt_transMat[16]; 
+
+    btScalar bt_transMat[16];
     t.getOpenGLMatrix(bt_transMat);
     cube.transMat = glm::make_mat4(bt_transMat);
 }

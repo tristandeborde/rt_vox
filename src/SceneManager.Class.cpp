@@ -12,6 +12,26 @@ SceneManager::~SceneManager() {
     return;
 }
 
+glm::mat4 setCenter(float x, float y, float z) {
+    auto position = glm::mat4(1.f);
+    position[3][0] = x;
+    position[3][1] = y;
+    position[3][2] = z;
+    return position;
+}
+
+void SceneManager::addBox(float x, float y, float z)
+{
+    Object object;
+    object.c.transMat = setCenter(x, y, z);
+    object.c.min = glm::vec4(-0.5f, -0.5f, -0.5f, 1.f);
+    object.c.max = glm::vec4(0.5f, 0.5f, 0.5f, 1.f);
+    object.material_index = 2;
+    object.mass = 5.f;
+    m_scene.objects.push_back(object);
+}
+
+
 void SceneManager::readScene()
 {
     m_scene.clear();
@@ -22,12 +42,12 @@ void SceneManager::readScene()
     srand(time(0));
     m_scene.objects = {
         /* The ground */
-        {{glm::mat4(1.f), glm::vec4(-5.0f, -0.1f, -5.0f, 1.f), glm::vec4(5.0f, 0.0f, 5.0f, 1.f)}, 1, 0},
+        {{setCenter(0.f, 0.f, 0.f), glm::vec4(-5.0f, -0.2f, -5.0f, 1.f), glm::vec4(5.0f, 0.2f, 5.0f, 1.f)}, 1, 0},
         /* Smol Cubes */
-        {{glm::mat4(1.f), glm::vec4(-0.5f, 0.0f, -0.5f, 1.f), glm::vec4(0.5f, 1.0f, 0.5f, 1.f)}, 2, 5},
-        {{glm::mat4(1.f), glm::vec4(-3.5f, 0.5f, 1.5f, 1.f), glm::vec4(-2.5f, 1.5f, 2.5f, 1.f)}, 1, 5},
-        {{glm::mat4(1.f), glm::vec4(-3.f, 2.0f, -3.8f, 1.f), glm::vec4(-2.f, 3.0f, -2.8f, 1.f)}, 2, 5},
-        {{glm::mat4(1.f), glm::vec4(-2.1f, 0.0f, -2.5f, 1.f), glm::vec4(-1.1f, 1.0f, -1.5f, 1.f)}, 1, 5}
+        {{setCenter(-3.f, 1.f, 2.f), glm::vec4(-0.5f, -0.5f, -0.5f, 1.f), glm::vec4(0.5f, 0.5f, 0.5f, 1.f)}, 2, 5},
+        {{setCenter(-3.f, 6.f, 2.f), glm::vec4(-0.5f, -0.5f, -0.5f, 1.f), glm::vec4(0.5f, 0.5f, 0.5f, 1.f)}, 1, 5},
+        {{setCenter(-2.5f, 1.5f, -2.f), glm::vec4(-0.5f, -0.5f, -0.5f, 1.f), glm::vec4(0.5f, 0.5f, 0.5f, 1.f)}, 2, 5},
+        {{setCenter(4.f, 5.f, -2.f), glm::vec4(-0.5f, -0.5f, -0.5f, 1.f), glm::vec4(0.5f, 0.5f, 0.5f, 1.f)}, 1, 5}
     };
 
     std::vector<PointLight> p_lights = {
@@ -121,24 +141,15 @@ void SceneManager::uploadScene()
 
 void SceneManager::uploadObjects() {
     ////////////////////////////////////////////////////// LOADING OBJECTS //////////////////////////////////////////////////////
-    void* p = malloc(m_numObjInShader * m_oAlignOffset);
-
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_storageBufferIDs[0]);
-    // Copy *existing* buffer data from GPU to CPU
-    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_numObjInShader * m_oAlignOffset, (void *)(p));
+    // TODO: Copy *existing* buffer data from GPU to CPU, in order to update cleverly only a single cube in whole buffer 
+    // glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_scene.objects.size() * m_oAlignOffset, (void *)(p));
 
     // Allocate a Shaderstorage buffer on the GPU memory
-    if (m_numObjInShader == 0) {
-        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numObjInShader + m_scene.numObjects()) * m_oAlignOffset, NULL, GL_DYNAMIC_DRAW);
-    }
-    else if (m_numObjInShader != m_scene.numObjects()) {
-        // Copy back buffer data to GPU, but in a bigger buffer to store new objects
-        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numObjInShader + m_scene.numObjects()) * m_oAlignOffset, p, GL_DYNAMIC_DRAW);
-        free(p);
-    }
+    glBufferData(GL_SHADER_STORAGE_BUFFER, m_scene.objects.size() * m_oAlignOffset, NULL, GL_DYNAMIC_DRAW);
 
+    m_numObjInShader = 0;
     if (m_scene.numObjects() != 0) {
-        m_numObjInShader = 0;
         // glMapBuffer is used to get a pointer to the GPU memory 
         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 
@@ -154,7 +165,6 @@ void SceneManager::uploadObjects() {
         glShaderStorageBlockBinding(m_computeShaderID, m_oBlockIndex, 0);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
-    free(p);
 }
 
 void SceneManager::uploadMaterials() {

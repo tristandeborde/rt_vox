@@ -24,9 +24,9 @@ struct DirectionalLight
 //Alignment will be 16 bytes therefore take two vec4 vectors
 struct Cube
 {
-    glm::mat4 transMat;
-    glm::vec4 min;
-    glm::vec4 max;
+    glm::mat4   transMat;
+    glm::vec4   min;
+    glm::vec4   max;
 };
 
 struct Material

@@ -15,7 +15,8 @@ private:
     std::vector<btRigidBody *> m_btBoxes;
 
     void updateBox(btRigidBody *bt_box, Cube &cube);
-    btRigidBody *addBox(float x, float y, float z, float mass);
+public:
+    void addBox(float x, float y, float z, float mass, glm::vec4 size);
 
 public:
     PhysicsEngine(float gravity_acceleration);

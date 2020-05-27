@@ -22,6 +22,7 @@ public:
     void uploadScene();
     Scene &getScene();
     void uploadObjects();
+    void addBox(float x, float y, float z);
 
 private:
     void initialize();

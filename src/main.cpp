@@ -14,12 +14,28 @@ void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsEngine &phys, Sc
     clock_t last_update = clock();
 
     GLFWwindow *win = gl.getWindow();
+    bool added = false;
 
     sm.uploadScene();
     while (win && !glfwWindowShouldClose(win))
     {
         gl.updateInput();
         cam.update(gl, 0.1f);
+        if (gl.isKeyPressed(GLFW_KEY_SPACE) && !added) {
+            std::cout << "Adding a cube..." << std::endl;
+
+            // // // Add box to renderer
+            // glm::vec3 position = cam.getPos();
+            // sm.addBox(position[0], position[1], position[2]);
+
+            // // // Add box to physics manager
+            // auto o = sm.getScene().objects.back();
+            // glm::vec4 origin = o->c.transMat[3];
+            // glm::vec4 sizeee = (o->c.max - o->c.min) / 2.f;
+            
+            // phys.addBox(origin.x, origin.y, origin.z, o->mass, sizeee);
+            // added = true;
+        }
 
         sm.uploadObjects();
         rt.render_GPU();
@@ -47,7 +63,6 @@ int main(int ac, char **av)
     // Create OpenGL manager
     OpenGL gl(WIDTH, HEIGHT);
 
-
     // Create Raytracer
     Raytracer rt(&cam, &gl); 
 
@@ -56,7 +71,7 @@ int main(int ac, char **av)
     sm.readScene(); // TODO: parser to read .obj files directly
     
     // Real g: -9.80665
-    PhysicsEngine phys(-9.80665);
+    PhysicsEngine phys(-1.f);
     phys.addObjects(sm.getScene());
 
     mainLoop(rt, gl, cam, phys, sm);

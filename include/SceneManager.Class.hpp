@@ -22,7 +22,7 @@ public:
     void uploadScene();
     Scene &getScene();
     void uploadObjects();
-    void addBox(float x, float y, float z);
+    Object addBox(float x, float y, float z);
 
 private:
     void initialize();
@@ -31,7 +31,7 @@ private:
     unsigned int    m_numObjInShader = 0;
     unsigned int    m_numMaterialsInShader = 0;
     unsigned int    m_numLightsInShader = 0;
-    unsigned int    m_reflectionDepth = 5;
+    unsigned int    m_reflectionDepth = 0;
 
     int m_oBlockIndex = 0;
     int m_mBlockIndex = 0;

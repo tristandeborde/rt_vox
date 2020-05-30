@@ -1,9 +1,9 @@
-#include "PhysicsEngine.hpp"
+#include "PhysicsManager.hpp"
 #include "Scene.Class.hpp"
 #include <glm/gtc/type_ptr.inl>
 #include <iostream>
 
-PhysicsEngine::PhysicsEngine(float gravity_acceleration) {
+PhysicsManager::PhysicsManager(float gravity_acceleration) {
     m_collision_config = new btDefaultCollisionConfiguration();
     m_dispatcher = new btCollisionDispatcher(m_collision_config);
     m_broadphase = new btDbvtBroadphase();
@@ -12,7 +12,7 @@ PhysicsEngine::PhysicsEngine(float gravity_acceleration) {
     m_world->setGravity(btVector3(0, gravity_acceleration, 0));
 }
 
-PhysicsEngine::~PhysicsEngine() {
+PhysicsManager::~PhysicsManager() {
     delete m_collision_config;
     delete m_dispatcher;
     delete m_broadphase;
@@ -20,21 +20,21 @@ PhysicsEngine::~PhysicsEngine() {
     delete m_world;
 }
 
-void PhysicsEngine::addObjects(Scene &sc) {
+void PhysicsManager::addObjects(Scene &sc) {
     for (auto obj: sc.objects) {
         glm::vec4 origin = obj.c.transMat[3];
-        glm::vec4 size = (obj.c.max - obj.c.min) / 2.f;
+        float size = obj.c.halfSize;
         // TODO: choose mass from "Object" instance (for now its just "Cube")
         addBox(origin.x, origin.y, origin.z, obj.mass, size);
     }
 }
 
-void PhysicsEngine::addBox(float x, float y, float z, float mass, glm::vec4 size) {
+void PhysicsManager::addBox(float x, float y, float z, float mass, float size) {
     btTransform t;
     t.setIdentity();
     t.setOrigin(btVector3(x, y, z));
 
-    btBoxShape *box = new btBoxShape(btVector3(size[0], size[1], size[2]));
+    btBoxShape *box = new btBoxShape(btVector3(size, size, size));
     btVector3 inertia(0, 0, 0);
 
     if (mass != 0.0) {
@@ -49,14 +49,14 @@ void PhysicsEngine::addBox(float x, float y, float z, float mass, glm::vec4 size
     m_world->addRigidBody(body, 1, 1);
 }
 
-void PhysicsEngine::step(Scene &sc, double last_update) {
+void PhysicsManager::step(Scene &sc, double last_update) {
     for (unsigned long i = 0; i < sc.objects.size(); i++)
         this->updateBox(m_btBoxes[i], sc.objects[i].c);
     double step_time = (clock() - last_update) / (double) CLOCKS_PER_SEC;
     m_world->stepSimulation(step_time);
 }
 
-void PhysicsEngine::updateBox(btRigidBody *bt_box, Cube &cube) {
+void PhysicsManager::updateBox(btRigidBody *bt_box, Cube &cube) {
     btTransform t;
     // Get rotation and translation in quaternion form
     bt_box->getMotionState()->getWorldTransform(t);

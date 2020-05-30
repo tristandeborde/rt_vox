@@ -25,8 +25,7 @@ struct DirectionalLight
 struct Cube
 {
     glm::mat4   transMat;
-    glm::vec4   min;
-    glm::vec4   max;
+    float       halfSize;
 };
 
 struct Material

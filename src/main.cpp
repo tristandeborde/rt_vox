@@ -2,7 +2,7 @@
 // #include "Octree.Class.hpp"
 #include "OpenGL.Class.hpp"
 #include "Raytracer.Class.hpp"
-#include "PhysicsEngine.hpp"
+#include "PhysicsManager.hpp"
 #include "SceneManager.Class.hpp"
 #include <time.h>
 #include <bullet/btBulletDynamicsCommon.h>
@@ -10,31 +10,28 @@
 #define WIDTH 1280
 #define HEIGHT 1024
 
-void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsEngine &phys, SceneManager &sm){
+void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &phys, SceneManager &sm){
     clock_t last_update = clock();
 
     GLFWwindow *win = gl.getWindow();
-    bool added = false;
 
     sm.uploadScene();
     while (win && !glfwWindowShouldClose(win))
     {
         gl.updateInput();
         cam.update(gl, 0.1f);
-        if (gl.isKeyPressed(GLFW_KEY_SPACE) && !added) {
+        if (gl.isKeyPressed(GLFW_KEY_SPACE)) {
             std::cout << "Adding a cube..." << std::endl;
 
-            // // // Add box to renderer
-            // glm::vec3 position = cam.getPos();
-            // sm.addBox(position[0], position[1], position[2]);
-
-            // // // Add box to physics manager
-            // auto o = sm.getScene().objects.back();
-            // glm::vec4 origin = o->c.transMat[3];
-            // glm::vec4 sizeee = (o->c.max - o->c.min) / 2.f;
+            // Add box to renderer
+            glm::vec3 position = cam.getPos();
+            auto o = sm.addBox(position[0], position[1], position[2]);
             
-            // phys.addBox(origin.x, origin.y, origin.z, o->mass, sizeee);
-            // added = true;
+            // Add box to Bullet Physics
+            glm::vec4 origin = o.c.transMat[3];
+            // std::cout << "position[0]: " << o.c.transMat[3][0] << "; position[1]: " << o.c.transMat[3][1] << "; position[2]: " << o.c.transMat[3][2] << std::endl;
+            
+            phys.addBox(origin.x, origin.y, origin.z, o.mass, o.c.halfSize);
         }
 
         sm.uploadObjects();
@@ -71,7 +68,7 @@ int main(int ac, char **av)
     sm.readScene(); // TODO: parser to read .obj files directly
     
     // Real g: -9.80665
-    PhysicsEngine phys(-1.f);
+    PhysicsManager phys(-1.f);
     phys.addObjects(sm.getScene());
 
     mainLoop(rt, gl, cam, phys, sm);

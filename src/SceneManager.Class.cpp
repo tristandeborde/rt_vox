@@ -20,15 +20,15 @@ glm::mat4 setCenter(float x, float y, float z) {
     return position;
 }
 
-void SceneManager::addBox(float x, float y, float z)
+Object SceneManager::addBox(float x, float y, float z)
 {
     Object object;
     object.c.transMat = setCenter(x, y, z);
-    object.c.min = glm::vec4(-0.5f, -0.5f, -0.5f, 1.f);
-    object.c.max = glm::vec4(0.5f, 0.5f, 0.5f, 1.f);
-    object.material_index = 2;
+    object.c.halfSize = 0.2f;
+    object.material_index = 0;
     object.mass = 5.f;
     m_scene.objects.push_back(object);
+    return object;
 }
 
 
@@ -42,12 +42,12 @@ void SceneManager::readScene()
     srand(time(0));
     m_scene.objects = {
         /* The ground */
-        {{setCenter(0.f, 0.f, 0.f), glm::vec4(-5.0f, -0.2f, -5.0f, 1.f), glm::vec4(5.0f, 0.2f, 5.0f, 1.f)}, 1, 0},
+        {{setCenter(0.f, -10.f, 0.f), 10.f}, 1, 0},
         /* Smol Cubes */
-        {{setCenter(-3.f, 1.f, 2.f), glm::vec4(-0.5f, -0.5f, -0.5f, 1.f), glm::vec4(0.5f, 0.5f, 0.5f, 1.f)}, 2, 5},
-        {{setCenter(-3.f, 6.f, 2.f), glm::vec4(-0.5f, -0.5f, -0.5f, 1.f), glm::vec4(0.5f, 0.5f, 0.5f, 1.f)}, 1, 5},
-        {{setCenter(-2.5f, 1.5f, -2.f), glm::vec4(-0.5f, -0.5f, -0.5f, 1.f), glm::vec4(0.5f, 0.5f, 0.5f, 1.f)}, 2, 5},
-        {{setCenter(4.f, 5.f, -2.f), glm::vec4(-0.5f, -0.5f, -0.5f, 1.f), glm::vec4(0.5f, 0.5f, 0.5f, 1.f)}, 1, 5}
+        {{setCenter(-3.f, 1.f, 2.f), 0.5f}, 0, 5},
+        {{setCenter(-3.f, 6.f, 2.f), 0.5f}, 0, 5},
+        {{setCenter(-2.5f, 1.5f, -2.f), 0.5f}, 0, 5},
+        {{setCenter(4.f, 5.f, -2.f), 1.f}, 0, 5}
     };
 
     std::vector<PointLight> p_lights = {
@@ -62,7 +62,7 @@ void SceneManager::readScene()
 
     glm::vec4 emission_neg = {0.f, 0.f, 0.f, 0.f};
     std::vector<Material> materials = {
-        {glm::vec4(0.1, 0.35, 0.75, 0.f), glm::vec4(0.7, 0.7, 0.7, 0.f), emission_neg, 20.f},
+        {glm::vec4(1.0f, 0.5f, 0.31f, 0.f), glm::vec4(1.0f, 0.5f, 0.31f, 0.f), glm::vec4(0.5f, 0.5f, 0.5f, 0.f), 32.0f},
         {glm::vec4(0.1, 0.35, 0.75, 0.f), glm::vec4(1, 1, 1, 0.f), emission_neg, 100.f},
     };
     m_scene.materials.reserve(materials.size());
@@ -73,7 +73,7 @@ void SceneManager::readScene()
 
 void SceneManager::initialize()
 {
-    const GLchar* oNames[] = {"objects[0].c.transMat", "objects[0].c.min", "objects[0].c.max", "objects[0].material_index"};
+    const GLchar* oNames[] = {"objects[0].c.transMat", "objects[0].c.halfSize", "objects[0].material_index"};
     const GLchar* mNames[] = {"materials[0].diffuse", "materials[0].specularity", "materials[0].emission", "materials[0].shininess"};
     const GLchar* lNames[] = {"lights[0].pos_dir", "lights[0].color", "lights[0].attenuation"};
 
@@ -154,10 +154,10 @@ void SceneManager::uploadObjects() {
         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 
         for (const auto &obj : m_scene.objects) {
-            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[0], &(obj.c.transMat) , sizeof(glm::mat4));
-            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[1], &(obj.c.min) , sizeof(glm::vec4));
-            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[2], &(obj.c.max) , sizeof(glm::vec4));
-            std::memcpy(ptr + m_numObjInShader * m_oAlignOffset + m_oOffsets[4], &(obj.material_index) , sizeof(int));
+            int block_offset = m_numObjInShader * m_oAlignOffset;
+            std::memcpy(ptr + block_offset + m_oOffsets[0], &(obj.c.transMat) , sizeof(glm::mat4));
+            std::memcpy(ptr + block_offset + m_oOffsets[1], &(obj.c.halfSize) , sizeof(float));
+            std::memcpy(ptr + block_offset + m_oOffsets[2], &(obj.material_index) , sizeof(int));
             m_numObjInShader++;
         }
 
@@ -165,6 +165,10 @@ void SceneManager::uploadObjects() {
         glShaderStorageBlockBinding(m_computeShaderID, m_oBlockIndex, 0);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
+
+    glUseProgram(m_computeShaderID);
+    auto uniID = glGetUniformLocation(m_computeShaderID, "numObj");
+    glUniform1ui(uniID, m_numObjInShader);
 }
 
 void SceneManager::uploadMaterials() {
@@ -235,9 +239,7 @@ void SceneManager::uploadLights() {
     free(p);
 
     glUseProgram(m_computeShaderID);
-    auto uniID = glGetUniformLocation(m_computeShaderID, "numObj");
-    glUniform1ui(uniID, m_numObjInShader);
-    uniID = glGetUniformLocation(m_computeShaderID, "numLights");
+    auto uniID = glGetUniformLocation(m_computeShaderID, "numLights");
     glUniform1ui(uniID, m_numLightsInShader);
     uniID = glGetUniformLocation(m_computeShaderID, "reflectionDepth");
     glUniform1ui(uniID, m_reflectionDepth);

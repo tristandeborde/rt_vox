@@ -13,8 +13,7 @@ struct Camera{
 
 struct Cube {
     mat4 transMat;
-    vec4 min;
-    vec4 max;
+    float halfSize;
 };
 
 struct Object{
@@ -103,8 +102,8 @@ bool intersectPlanes(const vec3 axis, int box_index, inout planeinfo p_info, out
     Cube c = objects[box_index].c;
 
     if (fabs(p_info.f) > 0.000001f) {
-        float t1 = (p_info.e + c.min[p_info.ax_index] + c.transMat[3][p_info.ax_index])/p_info.f; // Intersection with "left" (for xaxis) plane
-        float t2 = (p_info.e + c.max[p_info.ax_index] + c.transMat[3][p_info.ax_index])/p_info.f; // Intersection with "right" (for xaxis) plane
+        float t1 = (p_info.e - c.halfSize + c.transMat[3][p_info.ax_index])/p_info.f; // Intersection with "left" (for xaxis) plane
+        float t2 = (p_info.e + c.halfSize + c.transMat[3][p_info.ax_index])/p_info.f; // Intersection with "right" (for xaxis) plane
         // We want t1 to be nearest intersection, so if it's not, invert t1 and t2
         if (t1 > t2) {
             float tmp = t1;
@@ -123,8 +122,8 @@ bool intersectPlanes(const vec3 axis, int box_index, inout planeinfo p_info, out
         if (p_info.tMax < p_info.tMin)
             return false;
     }
-    else if(-p_info.e + c.min[p_info.ax_index] + c.transMat[3][p_info.ax_index] > 0.0f ||
-                -p_info.e + c.max[p_info.ax_index] + c.transMat[3][p_info.ax_index] < 0.0f) {
+    else if(-p_info.e - c.halfSize + c.transMat[3][p_info.ax_index] > 0.0f ||
+                -p_info.e + c.halfSize + c.transMat[3][p_info.ax_index] < 0.0f) {
         // Rare case : the ray is almost parallel to the planes, so they don't have any "intersection"
         return false;
     }
@@ -251,8 +250,8 @@ vec4 calculateColor(Ray r, float t, uint box_index, vec3 normal)
                                     materials[matIdx].specularity.xyz * pow(max(dot(-normal,H), 0), materials[matIdx].shininess);
                     color += vec4(attCoef * phong, 0.0f);
                 } else {
-                    vec3 phong = vec3(0.5,0.5,0.5) * max(dot(normal, L), 0) +
-                                    vec3(0.5,0.5,0.5) * pow( max( dot(normal,H), 0), 10);
+                    vec3 phong = vec3(0.5f,0.5f,0.5f) * max(dot(normal, L), 0) +
+                                    vec3(0.5f,0.5f,0.5f) * pow( max( dot(normal,H), 0), 10);
                     color += vec4(attCoef * phong, 0.0f);
                 }
             }

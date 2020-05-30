@@ -5,7 +5,7 @@
 # include <glm/glm.hpp>
 # include "Scene.Class.hpp"
 
-class PhysicsEngine {
+class PhysicsManager {
 private:
     btCollisionConfiguration *m_collision_config;
     btDispatcher *m_dispatcher;
@@ -16,14 +16,14 @@ private:
 
     void updateBox(btRigidBody *bt_box, Cube &cube);
 public:
-    void addBox(float x, float y, float z, float mass, glm::vec4 size);
+    void addBox(float x, float y, float z, float mass, float size);
 
 public:
-    PhysicsEngine(float gravity_acceleration);
-    PhysicsEngine() = delete;
-    ~PhysicsEngine();
-    PhysicsEngine(PhysicsEngine &src) = delete;
-    PhysicsEngine &operator=(PhysicsEngine &src) = delete;
+    PhysicsManager(float gravity_acceleration);
+    PhysicsManager() = delete;
+    ~PhysicsManager();
+    PhysicsManager(PhysicsManager &src) = delete;
+    PhysicsManager &operator=(PhysicsManager &src) = delete;
 
     void step(Scene &sc, double last_update);
     void addObjects(Scene &sc);

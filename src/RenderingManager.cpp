@@ -1,77 +1,18 @@
-#include "SceneManager.Class.hpp"
+#include "RenderingManager.hpp"
 #include "Shader.Class.hpp"
 #include <stdlib.h>
 #include <time.h>
 
-SceneManager::SceneManager(GLuint computeShaderID):
+RenderingManager::RenderingManager(GLuint computeShaderID):
     m_computeShaderID(computeShaderID){
     this->initialize();
 }
 
-SceneManager::~SceneManager() {
+RenderingManager::~RenderingManager() {
     return;
 }
 
-glm::mat4 setCenter(float x, float y, float z) {
-    auto position = glm::mat4(1.f);
-    position[3][0] = x;
-    position[3][1] = y;
-    position[3][2] = z;
-    return position;
-}
-
-Object SceneManager::addBox(float x, float y, float z)
-{
-    Object object;
-    object.c.transMat = setCenter(x, y, z);
-    object.c.halfSize = 0.2f;
-    object.material_index = 0;
-    object.mass = 5.f;
-    m_scene.objects.push_back(object);
-    return object;
-}
-
-
-void SceneManager::readScene()
-{
-    m_scene.clear();
-
-    /* TODO: Create obj file parser
-    auto data = reader.getData(); */
-
-    srand(time(0));
-    m_scene.objects = {
-        /* The ground */
-        {{setCenter(0.f, -10.f, 0.f), 10.f}, 1, 0},
-        /* Smol Cubes */
-        {{setCenter(-3.f, 1.f, 2.f), 0.5f}, 0, 5},
-        {{setCenter(-3.f, 6.f, 2.f), 0.5f}, 0, 5},
-        {{setCenter(-2.5f, 1.5f, -2.f), 0.5f}, 0, 5},
-        {{setCenter(4.f, 5.f, -2.f), 1.f}, 0, 5}
-    };
-
-    std::vector<PointLight> p_lights = {
-        {glm::vec4(0.f, 10.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 1.f, 0.f), glm::vec4(0.f, 0.f, 0.5f, 1.f)},
-        {glm::vec4(10.f, -10.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 1.f, 0.f), glm::vec4(0.f, 0.f, 3.f, 1.f)},
-        {glm::vec4(10.f, 10.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 1.f, 0.f), glm::vec4(0.f, 0.f, 3.f, 1.f)},
-    };
-    m_scene.pointLights.reserve(p_lights.size());
-    for (const auto &pl : p_lights) {
-        m_scene.pointLights.push_back(pl);
-    }
-
-    glm::vec4 emission_neg = {0.f, 0.f, 0.f, 0.f};
-    std::vector<Material> materials = {
-        {glm::vec4(1.0f, 0.5f, 0.31f, 0.f), glm::vec4(1.0f, 0.5f, 0.31f, 0.f), glm::vec4(0.5f, 0.5f, 0.5f, 0.f), 32.0f},
-        {glm::vec4(0.1, 0.35, 0.75, 0.f), glm::vec4(1, 1, 1, 0.f), emission_neg, 100.f},
-    };
-    m_scene.materials.reserve(materials.size());
-    for (const auto &m : materials) {
-        m_scene.materials.push_back(m);
-    }
-}
-
-void SceneManager::initialize()
+void RenderingManager::initialize()
 {
     const GLchar* oNames[] = {"objects[0].c.transMat", "objects[0].c.halfSize", "objects[0].material_index"};
     const GLchar* mNames[] = {"materials[0].diffuse", "materials[0].specularity", "materials[0].emission", "materials[0].shininess"};
@@ -132,28 +73,28 @@ void SceneManager::initialize()
     glGenBuffers(3, m_storageBufferIDs);
 }
 
-void SceneManager::uploadScene()
+void RenderingManager::uploadScene(Scene &sc)
 {
-    this->uploadObjects();
-    this->uploadMaterials();
-    this->uploadLights();
+    this->uploadObjects(sc);
+    this->uploadMaterials(sc);
+    this->uploadLights(sc);
 }
 
-void SceneManager::uploadObjects() {
+void RenderingManager::uploadObjects(Scene &sc) {
     ////////////////////////////////////////////////////// LOADING OBJECTS //////////////////////////////////////////////////////
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_storageBufferIDs[0]);
     // TODO: Copy *existing* buffer data from GPU to CPU, in order to update cleverly only a single cube in whole buffer 
-    // glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_scene.objects.size() * m_oAlignOffset, (void *)(p));
+    // glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sc.objects.size() * m_oAlignOffset, (void *)(p));
 
     // Allocate a Shaderstorage buffer on the GPU memory
-    glBufferData(GL_SHADER_STORAGE_BUFFER, m_scene.objects.size() * m_oAlignOffset, NULL, GL_DYNAMIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sc.objects.size() * m_oAlignOffset, NULL, GL_DYNAMIC_DRAW);
 
     m_numObjInShader = 0;
-    if (m_scene.numObjects() != 0) {
+    if (sc.numObjects() != 0) {
         // glMapBuffer is used to get a pointer to the GPU memory 
         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 
-        for (const auto &obj : m_scene.objects) {
+        for (const auto &obj : sc.objects) {
             int block_offset = m_numObjInShader * m_oAlignOffset;
             std::memcpy(ptr + block_offset + m_oOffsets[0], &(obj.c.transMat) , sizeof(glm::mat4));
             std::memcpy(ptr + block_offset + m_oOffsets[1], &(obj.c.halfSize) , sizeof(float));
@@ -171,23 +112,23 @@ void SceneManager::uploadObjects() {
     glUniform1ui(uniID, m_numObjInShader);
 }
 
-void SceneManager::uploadMaterials() {
+void RenderingManager::uploadMaterials(Scene &sc) {
     ////////////////////////////////////////////////////// LOADING MATERIALS //////////////////////////////////////////////////////
     void *p = malloc(m_numMaterialsInShader * m_mAlignOffset);
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, m_storageBufferIDs[1]);
     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_numMaterialsInShader * m_mAlignOffset, p);
     if (m_numMaterialsInShader * m_mAlignOffset == 0) {
-        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numMaterialsInShader + m_scene.materials.size()) * m_mAlignOffset, NULL, GL_STATIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numMaterialsInShader + sc.materials.size()) * m_mAlignOffset, NULL, GL_STATIC_DRAW);
     } else {
-        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numMaterialsInShader + m_scene.materials.size()) * m_mAlignOffset, p, GL_STATIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numMaterialsInShader + sc.materials.size()) * m_mAlignOffset, p, GL_STATIC_DRAW);
         free(p);
     }
 
-    if (!m_scene.materials.empty()) {
+    if (!sc.materials.empty()) {
         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 
-        for (const auto &mt : m_scene.materials) {
+        for (const auto &mt : sc.materials) {
             memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[0], &(mt.diffuse) , sizeof(glm::vec4));
             memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[1], &(mt.specularity) , sizeof(glm::vec4));
             memcpy(ptr + m_numMaterialsInShader * m_mAlignOffset + m_mOffsets[2], &(mt.emission) , sizeof(glm::vec4));
@@ -202,30 +143,30 @@ void SceneManager::uploadMaterials() {
     free(p);
 }
 
-void SceneManager::uploadLights() {
+void RenderingManager::uploadLights(Scene &sc) {
     ////////////////////////////////////////////////////// LOADING LIGHTS //////////////////////////////////////////////////////
     void *p = malloc(m_numLightsInShader * m_lAlignOffset);
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_storageBufferIDs[2]);
     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_numLightsInShader * m_lAlignOffset, p);
     if (m_numLightsInShader * m_lAlignOffset == 0) {
-        glBufferData(GL_SHADER_STORAGE_BUFFER, m_scene.numLights() * m_lAlignOffset, NULL, GL_STATIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sc.numLights() * m_lAlignOffset, NULL, GL_STATIC_DRAW);
     } else {
-        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numLightsInShader + m_scene.numLights()) * m_lAlignOffset, p, GL_STATIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numLightsInShader + sc.numLights()) * m_lAlignOffset, p, GL_STATIC_DRAW);
         free(p);
     }
 
-    if (m_scene.numLights() != 0){
+    if (sc.numLights() != 0){
         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 
-        for (const auto &pl : m_scene.pointLights) {
+        for (const auto &pl : sc.pointLights) {
             memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[0], &(pl.position) , sizeof(glm::vec4));
             memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[1], &(pl.color) , sizeof(glm::vec4));
             memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[2], &(pl.attenuation) , sizeof(glm::vec4));
             m_numLightsInShader++;
         }
 
-        for (const auto &dl : m_scene.directionalLights) {
+        for (const auto &dl : sc.directionalLights) {
             memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[0], &(dl.direction) , sizeof(glm::vec4));
             memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[1], &(dl.color) , sizeof(glm::vec4));
             memcpy(ptr + m_numLightsInShader * m_lAlignOffset + m_lOffsets[2], &(dl.attenuation) , sizeof(glm::vec4));
@@ -243,8 +184,4 @@ void SceneManager::uploadLights() {
     glUniform1ui(uniID, m_numLightsInShader);
     uniID = glGetUniformLocation(m_computeShaderID, "reflectionDepth");
     glUniform1ui(uniID, m_reflectionDepth);
-}
-
-Scene &SceneManager::getScene(){
-    return m_scene;
 }

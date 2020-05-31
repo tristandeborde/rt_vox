@@ -3,6 +3,24 @@
 #include <glm/gtc/type_ptr.inl>
 #include <iostream>
 
+// void CustomMotionState::setWorldTransform(const btTransform& worldTrans) const {
+//     // harvest the velocities
+//     btVector3 linearVelocity = m_body->getLinearVelocity();
+//     btVector3 angularVelocity = m_body->getAngularVelocity();
+//     // actually use harvested velocities here, or save for later
+
+//    // move the body back to its "locked" transform
+//     if (m_body) {
+//         m_body->setLinearVelocity(btVector(0.0f, 0.0f, 0.0f));
+//         m_body->setAngularVelocity(btVector(0.0f, 0,0f, 0.0f));
+//         m_body->setWorldTransform(m_lockedTransform);
+
+//         // maybe flag body for deactivation so that it settles down faster, dunno if this would be helpful or not
+//         m_body->setActivationState(WANTS_DEACTIVATION);
+//         m_body->setDeactivationTime(2.1f); // assuming default gDeactivationTime of 2.0 seconds
+//     }
+// }
+
 PhysicsManager::PhysicsManager(float gravity_acceleration) {
     m_collision_config = new btDefaultCollisionConfiguration();
     m_dispatcher = new btCollisionDispatcher(m_collision_config);
@@ -23,9 +41,7 @@ PhysicsManager::~PhysicsManager() {
 void PhysicsManager::addObjects(Scene &sc) {
     for (auto obj: sc.objects) {
         glm::vec4 origin = obj.c.transMat[3];
-        float size = obj.c.halfSize;
-        // TODO: choose mass from "Object" instance (for now its just "Cube")
-        addBox(origin.x, origin.y, origin.z, obj.mass, size);
+        this->addBox(origin.x, origin.y, origin.z, obj.mass, obj.c.halfSize);
     }
 }
 
@@ -49,11 +65,17 @@ void PhysicsManager::addBox(float x, float y, float z, float mass, float size) {
     m_world->addRigidBody(body, 1, 1);
 }
 
+void myTickCallback(btDynamicsWorld *world, btScalar timeStep) {
+    int numManifolds = world->getDispatcher()->getNumManifolds();
+    printf("numManifolds = %d\n",numManifolds);
+}
+
 void PhysicsManager::step(Scene &sc, double last_update) {
     for (unsigned long i = 0; i < sc.objects.size(); i++)
         this->updateBox(m_btBoxes[i], sc.objects[i].c);
     double step_time = (clock() - last_update) / (double) CLOCKS_PER_SEC;
     m_world->stepSimulation(step_time);
+    m_world->setInternalTickCallback(myTickCallback);
 }
 
 void PhysicsManager::updateBox(btRigidBody *bt_box, Cube &cube) {

@@ -9,19 +9,17 @@
 # include <vector>
 # include "Scene.Class.hpp"
 
-class SceneManager
+class RenderingManager
 {
 public:
-    SceneManager(GLuint computeShaderID);
-    ~SceneManager();
-    SceneManager() = delete;
-    SceneManager(SceneManager &) = delete;
-    SceneManager &operator=(SceneManager &) = delete;
+    RenderingManager(GLuint computeShaderID);
+    ~RenderingManager();
+    RenderingManager() = delete;
+    RenderingManager(RenderingManager &) = delete;
+    RenderingManager &operator=(RenderingManager &) = delete;
 
-    void readScene();
-    void uploadScene();
-    Scene &getScene();
-    void uploadObjects();
+    void uploadScene(Scene &sc);
+    void uploadObjects(Scene &sc);
     Object addBox(float x, float y, float z);
 
 private:
@@ -45,10 +43,8 @@ private:
     int *m_mOffsets = nullptr;
     int *m_lOffsets = nullptr;
 
-    Scene m_scene;
-
-    void uploadMaterials();
-    void uploadLights();
+    void uploadMaterials(Scene &sc);
+    void uploadLights(Scene &sc);
 
 };
 

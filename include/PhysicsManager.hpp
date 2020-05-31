@@ -5,6 +5,11 @@
 # include <glm/glm.hpp>
 # include "Scene.Class.hpp"
 
+// class CustomMotionState : public btDefaultMotionState {
+//     ~CustomMotionState() = default;
+//     void setWorldTransform(const btTransform& worldTrans) const;
+// };
+
 class PhysicsManager {
 private:
     btCollisionConfiguration *m_collision_config;

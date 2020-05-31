@@ -5,7 +5,7 @@
 #include <iostream>
 #include <cassert>
 #include "Raytracer.Class.hpp"
-#include "SceneManager.Class.hpp"
+#include "SceneManager.hpp"
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 

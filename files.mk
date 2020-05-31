@@ -19,4 +19,5 @@ SRC :=  main.cpp \
 		OpenGL.Class.cpp \
 		Camera.Class.cpp \
 		PhysicsManager.cpp \
-		SceneManager.Class.cpp
+		RenderingManager.cpp \
+		SceneManager.cpp

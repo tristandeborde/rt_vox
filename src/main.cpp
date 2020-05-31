@@ -3,47 +3,40 @@
 #include "OpenGL.Class.hpp"
 #include "Raytracer.Class.hpp"
 #include "PhysicsManager.hpp"
-#include "SceneManager.Class.hpp"
+#include "RenderingManager.hpp"
+#include "SceneManager.hpp"
 #include <time.h>
 #include <bullet/btBulletDynamicsCommon.h>
 
 #define WIDTH 1280
 #define HEIGHT 1024
+#define MIN_INPUT_DELTA 120000
 
-void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &phys, SceneManager &sm){
+void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &pm, RenderingManager &rm, SceneManager &sm){
     clock_t last_update = clock();
+    clock_t last_key_press = last_update;
 
     GLFWwindow *win = gl.getWindow();
 
-    sm.uploadScene();
+    rm.uploadScene(sm.getScene());
     while (win && !glfwWindowShouldClose(win))
     {
+        last_update = clock();
         gl.updateInput();
         cam.update(gl, 0.1f);
-        if (gl.isKeyPressed(GLFW_KEY_SPACE)) {
-            std::cout << "Adding a cube..." << std::endl;
-
-            // Add box to renderer
-            glm::vec3 position = cam.getPos();
-            auto o = sm.addBox(position[0], position[1], position[2]);
-            
-            // Add box to Bullet Physics
-            glm::vec4 origin = o.c.transMat[3];
-            // std::cout << "position[0]: " << o.c.transMat[3][0] << "; position[1]: " << o.c.transMat[3][1] << "; position[2]: " << o.c.transMat[3][2] << std::endl;
-            
-            phys.addBox(origin.x, origin.y, origin.z, o.mass, o.c.halfSize);
+        if (gl.isKeyPressed(GLFW_KEY_SPACE) && last_update - last_key_press > MIN_INPUT_DELTA) {
+            std::cout << "Adding a cube at delta = " << last_update - last_key_press << std::endl;
+            last_key_press = last_update;
+            sm.addBox(last_update);
         }
 
-        sm.uploadObjects();
+        rm.uploadObjects(sm.getScene());
+        pm.step(sm.getScene(), last_update);
         rt.render_GPU();
-        // TODO: rasterize_objects();
 
-        phys.step(sm.getScene(), last_update);
         glfwSwapBuffers(win);
-        last_update = clock();
     }
 
-    // Clear all allocated GLFW resources.
     glfwTerminate();
 }
 
@@ -63,14 +56,18 @@ int main(int ac, char **av)
     // Create Raytracer
     Raytracer rt(&cam, &gl); 
 
-    // Scene Manager
-    SceneManager sm(rt.getComputeShaderID());
-    sm.readScene(); // TODO: parser to read .obj files directly
+    // Create Rendering Manager
+    RenderingManager rm(rt.getComputeShaderID());
     
     // Real g: -9.80665
-    PhysicsManager phys(-1.f);
-    phys.addObjects(sm.getScene());
+    PhysicsManager pm(-1.f);
 
-    mainLoop(rt, gl, cam, phys, sm);
+    // Create SceneManager
+    SceneManager sm(cam, pm, rm, sm);
+    sm.readScene(); // TODO: parser to read .obj files directly
+
+    pm.addObjects(sm.getScene());
+
+    mainLoop(rt, gl, cam, pm, rm, sm);
     return 0;
 }

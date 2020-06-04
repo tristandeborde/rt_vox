@@ -1,7 +1,10 @@
 #define GLM_FORCE_CTOR_INIT
+// #include "Octree.Class.hpp"
 #include "OpenGL.Class.hpp"
 #include "Raytracer.Class.hpp"
 #include "PhysicsManager.hpp"
+#include "PhysicsDebugDrawer.hpp"
+#include "ShaderDebug.hpp"
 #include "RenderingManager.hpp"
 #include "SceneManager.hpp"
 #include <time.h>
@@ -17,6 +20,8 @@ void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &pm, Ren
     clock_t last_key_press = last_update;
     
     GLFWwindow *win = gl.getWindow();
+    PhysicsDebugDrawer ph_debug;
+    ShaderDebug sh_debug;
 
     rm.uploadScene(sm.getScene());
     
@@ -25,7 +30,6 @@ void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &pm, Ren
         last_update = clock();
         gl.updateInput();
         cam.update(gl, 0.1f);
-
         if (gl.isKeyPressed(GLFW_KEY_SPACE) && last_update - last_key_press > MIN_INPUT_DELTA) {
             std::cout << "Adding a cube at delta = " << last_update - last_key_press << std::endl;
             last_key_press = last_update;
@@ -34,7 +38,21 @@ void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &pm, Ren
 
         rm.uploadObjects(sm.getScene());
         pm.step(sm.getScene(), last_update);
-        rt.render_GPU();
+        if (DEBUG){
+            pm.getDynamicsWorld()->debugDrawWorld();
+            
+            glm::mat4 Projection = cam.getProjMat(); 
+            glm::mat4 View = cam.getViewMat();
+            sh_debug.use();
+            GLint MatrixID =	glGetUniformLocation(sh_debug.getID(), "MVP"); // use the MVP in the simple shader
+            // // make the View and  Projection matrix
+            glm::mat4 VP = Projection * View;  // Remember order seems backwards
+            glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &VP[0][0]);
+            
+            ph_debug.DoDebugDraw();
+        }
+        else
+            rt.render_GPU();
         glfwSwapBuffers(win);
     }
 

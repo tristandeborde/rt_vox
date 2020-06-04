@@ -1,4 +1,5 @@
 #include "PhysicsManager.hpp"
+#include "PhysicsDebugDrawer.hpp"
 #include "Scene.Class.hpp"
 #include <glm/gtc/type_ptr.inl>
 #include <glm/gtc/matrix_transform.hpp>
@@ -11,6 +12,11 @@ PhysicsManager::PhysicsManager(float gravity_acceleration) {
     m_solver = new btSequentialImpulseConstraintSolver();
     m_world = new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collision_config);
     m_world->setGravity(btVector3(0, gravity_acceleration, 0));
+
+    // Debug draw
+    PhysicsDebugDrawer MyDrawer;
+    MyDrawer.setDebugMode(btIDebugDraw::DBG_DrawWireframe + btIDebugDraw::DBG_DrawContactPoints);
+    m_world->setDebugDrawer(&MyDrawer);
 }
 
 PhysicsManager::~PhysicsManager() {

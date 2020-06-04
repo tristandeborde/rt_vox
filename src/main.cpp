@@ -1,5 +1,4 @@
 #define GLM_FORCE_CTOR_INIT
-// #include "Octree.Class.hpp"
 #include "OpenGL.Class.hpp"
 #include "Raytracer.Class.hpp"
 #include "PhysicsManager.hpp"
@@ -11,29 +10,31 @@
 #define WIDTH 1280
 #define HEIGHT 1024
 #define MIN_INPUT_DELTA 120000
+#define DEBUG false
 
 void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &pm, RenderingManager &rm, SceneManager &sm){
     clock_t last_update = clock();
     clock_t last_key_press = last_update;
-
+    
     GLFWwindow *win = gl.getWindow();
 
     rm.uploadScene(sm.getScene());
+    
     while (win && !glfwWindowShouldClose(win))
     {
         last_update = clock();
         gl.updateInput();
         cam.update(gl, 0.1f);
+
         if (gl.isKeyPressed(GLFW_KEY_SPACE) && last_update - last_key_press > MIN_INPUT_DELTA) {
             std::cout << "Adding a cube at delta = " << last_update - last_key_press << std::endl;
             last_key_press = last_update;
-            sm.addBox(last_update);
+            sm.addBox(last_update, cam.getLookDir());
         }
 
         rm.uploadObjects(sm.getScene());
         pm.step(sm.getScene(), last_update);
         rt.render_GPU();
-
         glfwSwapBuffers(win);
     }
 
@@ -60,7 +61,7 @@ int main(int ac, char **av)
     RenderingManager rm(rt.getComputeShaderID());
     
     // Real g: -9.80665
-    PhysicsManager pm(-1.f);
+    PhysicsManager pm(-5.f);
 
     // Create SceneManager
     SceneManager sm(cam, pm, rm, sm);

@@ -1,7 +1,9 @@
-#ifndef PHYSICS_ENGINE_HPP
-# define PHYSICS_ENGINE_HPP
+#pragma once
 
 # include <bullet/btBulletDynamicsCommon.h>
+# include <bullet/LinearMath/btVector3.h>
+# include <bullet/LinearMath/btAlignedObjectArray.h>
+# include <bullet/BulletCollision/NarrowPhaseCollision/btRaycastCallback.h>
 # include <glm/glm.hpp>
 # include "Scene.Class.hpp"
 
@@ -21,7 +23,7 @@ private:
 
     void updateBox(btRigidBody *bt_box, Cube &cube);
 public:
-    void addBox(float x, float y, float z, float mass, float size);
+    btRigidBody *addBox(float x, float y, float z, float mass, float size);
 
 public:
     PhysicsManager(float gravity_acceleration);
@@ -32,6 +34,5 @@ public:
 
     void step(Scene &sc, double last_update);
     void addObjects(Scene &sc);
+    btDynamicsWorld *getDynamicsWorld();
 };
-
-#endif

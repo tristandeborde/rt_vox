@@ -2,7 +2,7 @@
 # define SCENEMANAGER_HPP
 
 #include <time.h>
-#include "Camera.Class.hpp"
+#include "Camera.hpp"
 #include "RenderingManager.hpp"
 #include "PhysicsManager.hpp"
 
@@ -15,7 +15,7 @@ public:
     SceneManager &operator=(SceneManager &src) = delete;
 
     SceneManager(SceneManager &src) = delete;
-    void addBox(clock_t last_update);
+    void addBox(clock_t last_update, const glm::vec3 &look);
     Scene &getScene();
     void readScene();
 

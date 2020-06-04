@@ -1,25 +1,8 @@
 #include "PhysicsManager.hpp"
 #include "Scene.Class.hpp"
 #include <glm/gtc/type_ptr.inl>
+#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
-
-// void CustomMotionState::setWorldTransform(const btTransform& worldTrans) const {
-//     // harvest the velocities
-//     btVector3 linearVelocity = m_body->getLinearVelocity();
-//     btVector3 angularVelocity = m_body->getAngularVelocity();
-//     // actually use harvested velocities here, or save for later
-
-//    // move the body back to its "locked" transform
-//     if (m_body) {
-//         m_body->setLinearVelocity(btVector(0.0f, 0.0f, 0.0f));
-//         m_body->setAngularVelocity(btVector(0.0f, 0,0f, 0.0f));
-//         m_body->setWorldTransform(m_lockedTransform);
-
-//         // maybe flag body for deactivation so that it settles down faster, dunno if this would be helpful or not
-//         m_body->setActivationState(WANTS_DEACTIVATION);
-//         m_body->setDeactivationTime(2.1f); // assuming default gDeactivationTime of 2.0 seconds
-//     }
-// }
 
 PhysicsManager::PhysicsManager(float gravity_acceleration) {
     m_collision_config = new btDefaultCollisionConfiguration();
@@ -31,6 +14,14 @@ PhysicsManager::PhysicsManager(float gravity_acceleration) {
 }
 
 PhysicsManager::~PhysicsManager() {
+    for (auto body: m_btBoxes) {
+        m_world->removeCollisionObject(body);
+        btMotionState *state = body->getMotionState();
+        btCollisionShape *shape = body->getCollisionShape();
+        delete body;
+        delete state;
+        delete shape;
+    }
     delete m_collision_config;
     delete m_dispatcher;
     delete m_broadphase;
@@ -45,7 +36,7 @@ void PhysicsManager::addObjects(Scene &sc) {
     }
 }
 
-void PhysicsManager::addBox(float x, float y, float z, float mass, float size) {
+btRigidBody *PhysicsManager::addBox(float x, float y, float z, float mass, float size) {
     btTransform t;
     t.setIdentity();
     t.setOrigin(btVector3(x, y, z));
@@ -63,6 +54,7 @@ void PhysicsManager::addBox(float x, float y, float z, float mass, float size) {
 
     m_btBoxes.push_back(body);
     m_world->addRigidBody(body, 1, 1);
+    return body;
 }
 
 void myTickCallback(btDynamicsWorld *world, btScalar timeStep) {
@@ -89,9 +81,6 @@ void PhysicsManager::updateBox(btRigidBody *bt_box, Cube &cube) {
     cube.transMat = glm::make_mat4(bt_transMat);
 }
 
-// TODO: 1/ Do renderBox, or should I say updateBox ? (https://youtu.be/1CEI2pOym1Y?t=2104)
-// To do that, replace OpenGL Model view matmul, by simple quaternion (t) to Matrix.
-// This matrix is used to modify the given cube.transMat in Cubes. 
-// => No actual rendering ! just modifying the cube.transMat, rendering is done in rt.comp
-
-// TODO: 3/ Add a small function to spawn box on spacebar.
+btDynamicsWorld *PhysicsManager::getDynamicsWorld(){
+    return m_world;
+}

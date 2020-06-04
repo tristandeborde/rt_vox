@@ -5,7 +5,7 @@
 # include <vector>
 # include "ShaderCompute.Class.hpp"
 # include "ShaderQuad.Class.hpp"
-# include "Camera.Class.hpp"
+# include "Camera.hpp"
 
 class Raytracer
 {

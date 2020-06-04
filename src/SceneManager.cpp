@@ -13,7 +13,7 @@ SceneManager::~SceneManager(){
     return;
 }
 
-void SceneManager::addBox(clock_t last_update){
+void SceneManager::addBox(clock_t last_update, const glm::vec3 &look){
     // Add box to renderer
     glm::vec3 position = m_cam.getPos();
     Object box;
@@ -25,7 +25,8 @@ void SceneManager::addBox(clock_t last_update){
     
     // Add box to Bullet Physics
     glm::vec4 origin = box.c.transMat[3];
-    m_pm.addBox(origin.x, origin.y, origin.z, box.mass, box.c.halfSize);
+    btRigidBody *body = m_pm.addBox(origin.x, origin.y, origin.z, box.mass, box.c.halfSize);
+    body->setLinearVelocity(btVector3(look.x*5, look.y*5, look.z*5));
 }
 
 glm::mat4 SceneManager::setCenter(float x, float y, float z) {
@@ -48,10 +49,10 @@ void SceneManager::readScene()
         /* The ground */
         {{setCenter(0.f, -10.f, 0.f), 10.f}, 1, 0},
         /* Smol Cubes */
-        {{setCenter(-3.f, 1.f, 2.f), 1.f}, 0, 5},
-        {{setCenter(-3.f, 6.f, 2.f), 1.f}, 0, 5},
-        {{setCenter(-2.5f, 1.5f, -2.f), 1.f}, 0, 5},
-        {{setCenter(4.f, 5.f, -2.f), 1.f}, 0, 5}
+        {{setCenter(-3.f, 1.f, 2.f), 1.f}, 0, 1},
+        {{setCenter(-3.f, 6.f, 2.f), 1.f}, 0, 1},
+        {{setCenter(-2.5f, 1.5f, -2.f), 1.f}, 0, 1},
+        {{setCenter(4.f, 5.f, -2.f), 1.f}, 0, 1}
     };
 
     std::vector<PointLight> p_lights = {

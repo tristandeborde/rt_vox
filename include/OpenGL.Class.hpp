@@ -1,10 +1,9 @@
-#ifndef OPENGL_CLASS_HPP
-# define OPENGL_CLASS_HPP
+#pragma once
 
-# include <glad/glad.h>
-# include <GLFW/glfw3.h>
-# include <vector>
-# include <iostream>
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+#include <vector>
+#include <iostream>
 
 # ifdef __APPLE__
     # define GL_VERSION_MAJOR 3
@@ -48,6 +47,3 @@ public:
     bool isMouseButtonPressed(unsigned int GLFW_MouseButton) const;
 
 };
-
-
-#endif

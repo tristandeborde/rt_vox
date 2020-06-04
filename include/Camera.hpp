@@ -15,28 +15,33 @@ public:
     int getHeight() const;
     float getFovY() const;
     float getFovX() const;
+    glm::mat4 getProjMat() ;
+    glm::mat4 getViewMat() ;
     const glm::vec3& getPos() const;
+    glm::vec3 getPosNonRef() const;
     const glm::vec3& getLookDir() const;
+    glm::vec3 getLookDirNonRef() const;
     const glm::vec3& getUp() const;
+    glm::vec3 getUpNonRef() const;
     const glm::vec3& getRight() const;
 
     glm::vec3 getEyeRay(uint x, uint y);
     void update(OpenGL &input, float dt);
 
 private:
-    int	_width = 1280;
-    int _height = 1024;
-    float _fovY = 0.f;
-    float _fovX = 0.f;
-    float _accRotX = 0.f;
-    float _accRotY = 0.f;
-    float _sensitivity  = 1.f;
-    float _movSpeed = 10.f;
+    int	m_width = 1280;
+    int m_height = 1024;
+    float m_fovY = 0.f;
+    float m_fovX = 0.f;
+    float m_accRotX = 0.f;
+    float m_accRotY = 0.f;
+    float m_sensitivity  = 1.f;
+    float m_movSpeed = 10.f;
 
-    glm::vec3 _pos{ 0.f, 0.f, 0.f };
-    glm::vec3 _lookDir{ 0.f, 0.f, -1.f };
-    glm::vec3 _up{ 0.f, 1.f, 0.f };
-    glm::vec3 _right{ 1.f, 0.f, 0.f };
+    glm::vec3 m_pos{ 0.f, 0.f, 0.f };
+    glm::vec3 m_lookDir{ 0.f, 0.f, -1.f };
+    glm::vec3 m_up{ 0.f, 1.f, 0.f };
+    glm::vec3 m_right{ 1.f, 0.f, 0.f };
 };
 
 #endif

@@ -26,10 +26,16 @@ void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &pm, Ren
         gl.updateInput();
         cam.update(gl, 0.1f);
 
-        if (gl.isKeyPressed(GLFW_KEY_SPACE) && last_update - last_key_press > MIN_INPUT_DELTA) {
-            std::cout << "Adding a cube at delta = " << last_update - last_key_press << std::endl;
+        if (last_update - last_key_press > MIN_INPUT_DELTA) {
+            if (gl.isKeyPressed(GLFW_KEY_SPACE)) {
+                std::cout << "Adding CUBE at delta = " << last_update - last_key_press << std::endl;
+                sm.addBox(last_update, cam.getLookDir());
+            }
+            else if (gl.isKeyPressed(GLFW_KEY_C)) {
+                std::cout << "Adding COMPOSITE at delta = " << last_update - last_key_press << std::endl;
+                sm.addCompositeBox(last_update, cam.getLookDir());
+            }
             last_key_press = last_update;
-            sm.addBox(last_update, cam.getLookDir());
         }
 
         rm.uploadObjects(sm.getScene());

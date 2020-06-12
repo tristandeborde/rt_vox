@@ -57,9 +57,22 @@ btRigidBody *PhysicsManager::addBox(float x, float y, float z, float mass, float
     return body;
 }
 
+void PhysicsManager::stickBox(btRigidBody *pBodyA, btRigidBody *pBodyB){
+    btTransform frameInA, frameInB;
+    frameInA = btTransform::getIdentity();
+    frameInB = btTransform::getIdentity();
+    frameInA.setOrigin(btVector3(1., 0., 0.));
+    frameInB.setOrigin(btVector3(-1., 0., 0.));
+    
+    btFixedConstraint* pFixConstraint = new btFixedConstraint(*pBodyA, *pBodyB, frameInA, frameInB);
+    m_world->addConstraint(pFixConstraint, true);
+    return;
+}
+
 void myTickCallback(btDynamicsWorld *world, btScalar timeStep) {
-    int numManifolds = world->getDispatcher()->getNumManifolds();
-    printf("numManifolds = %d\n",numManifolds);
+    // int numManifolds = world->getDispatcher()->getNumManifolds();
+    // printf("numManifolds = %d\n",numManifolds);
+    return;
 }
 
 void PhysicsManager::step(Scene &sc, double last_update) {

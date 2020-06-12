@@ -29,6 +29,33 @@ void SceneManager::addBox(clock_t last_update, const glm::vec3 &look){
     body->setLinearVelocity(btVector3(look.x*5, look.y*5, look.z*5));
 }
 
+void SceneManager::addCompositeBox(clock_t last_update, const glm::vec3 &look) {
+    // Add boxes to renderer
+    glm::vec3 position = m_cam.getPos();
+    Object boxA, boxB;
+    boxA.c.transMat = setCenter(position.x, position.y, position.z);
+    boxB.c.transMat = setCenter(position.x + 2.f, position.y, position.z);
+    boxA.c.halfSize = 1.f;
+    boxB.c.halfSize = 1.f;
+    boxA.material_index = 0;
+    boxB.material_index = 0;
+    boxA.mass = 5.f;
+    boxB.mass = 5.f;
+    m_sc.objects.push_back(boxA);
+    m_sc.objects.push_back(boxB);
+    
+    // Add boxes to Bullet Physics
+    glm::vec4 originA = boxA.c.transMat[3];
+    glm::vec4 originB = boxB.c.transMat[3];
+    btRigidBody *bodyA = m_pm.addBox(originA.x, originA.y, originA.z, boxA.mass, boxA.c.halfSize);
+    btRigidBody *bodyB = m_pm.addBox(originB.x, originB.y, originB.z, boxB.mass, boxB.c.halfSize);
+
+    // Stick boxes together
+    m_pm.stickBox(bodyA, bodyB);
+
+    // body->setLinearVelocity(btVector3(look.x*5, look.y*5, look.z*5));
+}
+
 glm::mat4 SceneManager::setCenter(float x, float y, float z) {
     auto position = glm::mat4(1.f);
     position[3][0] = x;

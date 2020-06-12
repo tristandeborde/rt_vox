@@ -22,10 +22,11 @@ private:
     std::vector<btRigidBody *> m_btBoxes;
 
     void updateBox(btRigidBody *bt_box, Cube &cube);
-public:
-    btRigidBody *addBox(float x, float y, float z, float mass, float size);
 
 public:
+    btRigidBody *addBox(float x, float y, float z, float mass, float size);
+    void stickBox(btRigidBody *pbodyA, btRigidBody *pbodyB);
+
     PhysicsManager(float gravity_acceleration);
     PhysicsManager() = delete;
     ~PhysicsManager();

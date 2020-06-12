@@ -13,9 +13,10 @@ public:
     SceneManager() = delete;
     ~SceneManager();
     SceneManager &operator=(SceneManager &src) = delete;
-
     SceneManager(SceneManager &src) = delete;
+
     void addBox(clock_t last_update, const glm::vec3 &look);
+    void addCompositeBox(clock_t last_update, const glm::vec3 &look);
     Scene &getScene();
     void readScene();
 

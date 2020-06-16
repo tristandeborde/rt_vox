@@ -37,6 +37,7 @@ void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &pm, Ren
             }
             last_key_press = last_update;
         }
+        sm.selectPlane();
 
         rm.uploadObjects(sm.getScene());
         pm.step(sm.getScene(), last_update);
@@ -55,7 +56,7 @@ int main(int ac, char **av)
     glm::vec3 pos(3.0f, 2.0f, 7.0f);
     glm::vec3 lookAt(0.f, 0.f, 1.f);
     glm::vec3 up(0.f, 1.f, 0.f);
-    Camera cam(WIDTH, HEIGHT, 45.f, 0.1f, pos, lookAt, up);
+    Camera cam(WIDTH, HEIGHT, 45.f, 0.05f, pos, lookAt, up);
     
     // Create OpenGL manager
     OpenGL gl(WIDTH, HEIGHT);

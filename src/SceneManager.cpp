@@ -13,6 +13,101 @@ SceneManager::~SceneManager(){
     return;
 }
 
+bool SceneManager::intersectPlanes(const glm::vec3 &axis, std::vector<Object>::iterator it, planeinfo &p_info, glm::vec3 &normal) {
+	// Test intersection between ray and the 2 planes perpendicular to one OBB axis
+    float swapped = 1.f;
+
+    if (fabs(p_info.ray_proj) > 0.000001f) {
+        float plane_intersect1 = (p_info.center_proj - it->c.halfSize)/p_info.ray_proj; // Intersection with "left" (for xaxis) plane
+        float plane_intersect2 = (p_info.center_proj + it->c.halfSize)/p_info.ray_proj; // Intersection with "right" (for xaxis) plane
+
+        // We want plane_intersect1 to be nearest intersection, so if it's not, invert plane_intersect1 and plane_intersect2
+        if (plane_intersect1 > plane_intersect2) {
+            float tmp = plane_intersect1;
+            plane_intersect1 = plane_intersect2;
+            plane_intersect2 = tmp;
+            swapped = -1.f; // Used to invert the normal (~ choose opposite cube face)
+        }
+
+        p_info.max_intersect = plane_intersect2 < p_info.max_intersect ? plane_intersect2 : p_info.max_intersect; // max_intersect = nearest "far" intersection
+        if (plane_intersect1 > p_info.min_intersect) { // min_intersect = farthest "near" intersection
+            p_info.min_intersect = plane_intersect1;
+            normal = glm::normalize(swapped * axis);
+        }
+
+        // The trick : if "far" is closer than "near", then there is NO intersection.
+        if (p_info.max_intersect < p_info.min_intersect)
+            return false;
+    }
+    else if(-p_info.center_proj - it->c.halfSize + it->c.transMat[3][p_info.ax_index] > 0.0f ||
+                -p_info.center_proj + it->c.halfSize + it->c.transMat[3][p_info.ax_index] < 0.0f) {
+        // Rare case : the ray is almost parallel to the planes, so they don't have any "intersection"
+        return false;
+    }
+    return true;
+}
+
+float SceneManager::intersectBox(Ray &r, std::vector<Object>::iterator it, glm::vec3 &normal) {
+    // https://www.opengl-tutorial.org/miscellaneous/clicking-on-objects/picking-with-custom-ray-obb-function/
+    glm::vec3 center = {it->c.transMat[3].x, it->c.transMat[3].y, it->c.transMat[3].z};
+    planeinfo p_info = {0, 0.f, 0.f, 0.f, 100000.0f};
+
+    for (int ax_index = 0; ax_index < 3; ax_index++) {
+        glm::vec3 axis = {it->c.transMat[ax_index].x, it->c.transMat[ax_index].y, it->c.transMat[ax_index].z}; 
+        p_info.center_proj = glm::dot(axis, (center - r.origin)); // Projection of (center - ray_orig) on axis
+        p_info.ray_proj = glm::dot(axis, r.dir); // Projection of ray on axis
+        p_info.ax_index = ax_index;
+        if (!intersectPlanes(axis, it, p_info, normal))
+            return -1.f;
+    }
+
+	return p_info.min_intersect;
+}
+
+std::vector<Object>::iterator SceneManager::RaycastBoxes(Ray r) {
+    glm::vec3   normal;
+    float       intersection_dist, shortest_dist = 100.0f;
+    std::vector<Object>::iterator intersect_it = m_sc.objects.end();
+
+    for (std::vector<Object>::iterator it = m_sc.objects.begin(); it != m_sc.objects.end(); it++) {
+        intersection_dist = intersectBox(r, it, normal);
+        std::cout << "Intersection dist: " << intersection_dist << std::endl;
+        if (intersection_dist > -1.f
+            && intersection_dist < shortest_dist) {
+            shortest_dist = intersection_dist;
+            intersect_it = it;
+        }
+    }
+    std::cout << "Shortest dist: " << shortest_dist << std::endl;
+    return intersect_it;
+}
+
+Ray SceneManager::initRay(uint x, uint y) {
+    float halfWidth = float(m_cam.getWidth()) / 2.0f;
+    float halfHeight = float(m_cam.getHeight()) / 2.0f;
+
+    float a = m_cam.getFovX() * ((float(x) - halfWidth + 0.5f) / halfWidth);
+    float b = m_cam.getFovY() * ((halfHeight - float(y) - 0.5f) / halfHeight);
+
+    glm::vec3 dir = glm::normalize(a * m_cam.getRight() + b * m_cam.getUp() + m_cam.getLookDir());
+
+    return {m_cam.getPos(), dir};
+}
+
+void SceneManager::selectPlane(void) {
+    // Ray         r = initRay(m_cam.getWidth()/2, m_cam.getHeight()/2);
+    Ray         r = {m_cam.getPos(), m_cam.getLookDir()};
+    std::vector<Object>::iterator it = this->RaycastBoxes(r);
+
+    if (it != m_sc.objects.end())
+    {
+        it->material_index = (it->material_index + 1) % 2;
+        return;
+        // std::cout << "Selected cube with pos: x=" << it->c.transMat[3].x
+            // << ", y=" << it->c.transMat[3].y << ", z=" << it->c.transMat[3].x << std::endl;
+    }
+}
+
 void SceneManager::addBox(clock_t last_update, const glm::vec3 &look){
     // Add box to renderer
     glm::vec3 position = m_cam.getPos();
@@ -43,7 +138,7 @@ void SceneManager::addCompositeBox(clock_t last_update, const glm::vec3 &look) {
     boxB.mass = 5.f;
     m_sc.objects.push_back(boxA);
     m_sc.objects.push_back(boxB);
-    
+
     // Add boxes to Bullet Physics
     glm::vec4 originA = boxA.c.transMat[3];
     glm::vec4 originB = boxB.c.transMat[3];

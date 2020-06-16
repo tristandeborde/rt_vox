@@ -1,5 +1,6 @@
 #include "OpenGL.Class.hpp"
 
+
 OpenGL::OpenGL(int w, int h): _screen_width(w), _screen_height(h)
 {
     this->initWindow();
@@ -56,6 +57,8 @@ void OpenGL::initWindow(void) {
             this->_window = NULL;
         }
     }
+
+    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 GLFWwindow * OpenGL::getWindow() {

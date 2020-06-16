@@ -109,7 +109,6 @@ glm::vec3 Camera::getPosNonRef() const
     return (this->m_pos);
 }
 
-
 const glm::vec3& Camera::getLookDir() const
 {
     return (this->m_lookDir);

@@ -63,7 +63,7 @@ void PhysicsManager::stickBox(btRigidBody *pBodyA, btRigidBody *pBodyB){
     frameInB = btTransform::getIdentity();
     frameInA.setOrigin(btVector3(1., 0., 0.));
     frameInB.setOrigin(btVector3(-1., 0., 0.));
-    
+
     btFixedConstraint* pFixConstraint = new btFixedConstraint(*pBodyA, *pBodyB, frameInA, frameInB);
     m_world->addConstraint(pFixConstraint, true);
     return;

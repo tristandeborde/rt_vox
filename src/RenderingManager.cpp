@@ -91,14 +91,14 @@ void RenderingManager::uploadObjects(Scene &sc) {
 
     m_numObjInShader = 0;
     if (sc.numObjects() != 0) {
-        // glMapBuffer is used to get a pointer to the GPU memory 
+        // glMapBuffer is used to get a pointer to the GPU memory
         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 
         for (const auto &obj : sc.objects) {
             int block_offset = m_numObjInShader * m_oAlignOffset;
-            std::memcpy(ptr + block_offset + m_oOffsets[0], &(obj.c.transMat) , sizeof(glm::mat4));
-            std::memcpy(ptr + block_offset + m_oOffsets[1], &(obj.c.halfSize) , sizeof(float));
-            std::memcpy(ptr + block_offset + m_oOffsets[2], &(obj.material_index) , sizeof(int));
+            std::memcpy(ptr + block_offset + m_oOffsets[0], &(obj.c.transMat), sizeof(glm::mat4));
+            std::memcpy(ptr + block_offset + m_oOffsets[1], &(obj.c.halfSize), sizeof(float));
+            std::memcpy(ptr + block_offset + m_oOffsets[2], obj.material_index, sizeof(int) * 6);
             m_numObjInShader++;
         }
 

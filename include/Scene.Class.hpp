@@ -39,7 +39,7 @@ struct Material
 struct Object
 {
     Cube c;
-    int material_index;
+    int material_index[6];
     float mass;
 };
 

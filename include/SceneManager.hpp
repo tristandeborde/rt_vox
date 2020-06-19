@@ -2,17 +2,11 @@
 # define SCENEMANAGER_HPP
 
 #include <time.h>
+#include <utility>
 #include "Camera.hpp"
 #include "RenderingManager.hpp"
 #include "PhysicsManager.hpp"
 
-struct planeinfo {
-    uint     ax_index;
-    float   center_proj;
-    float   ray_proj;
-    float   min_intersect;
-    float   max_intersect;
-};
 
 struct Ray{
     glm::vec3 origin;
@@ -22,12 +16,22 @@ struct Ray{
 enum class Planes {
     left = 0,
     right,
-    front,
-    back,
     top,
-    bottom
+    bottom,
+    front,
+    back
 };
 
+struct PlaneInfo {
+    uint    ax_index;
+    float   center_proj;
+    float   ray_proj;
+    float   min_intersect;
+    float   max_intersect;
+    Planes  plane;
+};
+
+typedef std::pair<std::vector<Object>::iterator, Planes> PlaneHitInfo;
 class SceneManager
 {
 public:
@@ -52,9 +56,9 @@ private:
     Scene m_sc;
     glm::mat4 setCenter(float x, float y, float z);
     Ray initRay(uint x, uint y);
-    bool intersectPlanes(const glm::vec3 &axis, std::vector<Object>::iterator it, planeinfo &p_info, glm::vec3 &normal);
-    float intersectBox(Ray &r, std::vector<Object>::iterator it, glm::vec3 &normal);
-    std::vector<Object>::iterator RaycastBoxes(Ray r);
+    bool intersectPlanes(const glm::vec3 &axis, std::vector<Object>::iterator it, PlaneInfo &p_info);
+    PlaneInfo intersectBox(Ray &r, std::vector<Object>::iterator it);
+    PlaneHitInfo RaycastBoxes(Ray r);
 
 };
 

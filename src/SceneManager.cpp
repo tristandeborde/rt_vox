@@ -13,9 +13,9 @@ SceneManager::~SceneManager(){
     return;
 }
 
-bool SceneManager::intersectPlanes(const glm::vec3 &axis, std::vector<Object>::iterator it, planeinfo &p_info, glm::vec3 &normal) {
+bool SceneManager::intersectPlanes(const glm::vec3 &axis, std::vector<Object>::iterator it, PlaneInfo &p_info) {
 	// Test intersection between ray and the 2 planes perpendicular to one OBB axis
-    float swapped = 1.f;
+    int swapped = 0;
 
     if (fabs(p_info.ray_proj) > 0.000001f) {
         float plane_intersect1 = (p_info.center_proj - it->c.halfSize)/p_info.ray_proj; // Intersection with "left" (for xaxis) plane
@@ -26,13 +26,13 @@ bool SceneManager::intersectPlanes(const glm::vec3 &axis, std::vector<Object>::i
             float tmp = plane_intersect1;
             plane_intersect1 = plane_intersect2;
             plane_intersect2 = tmp;
-            swapped = -1.f; // Used to invert the normal (~ choose opposite cube face)
+            swapped = 1; // Used to invert the normal (~ choose opposite cube face)
         }
 
         p_info.max_intersect = plane_intersect2 < p_info.max_intersect ? plane_intersect2 : p_info.max_intersect; // max_intersect = nearest "far" intersection
         if (plane_intersect1 > p_info.min_intersect) { // min_intersect = farthest "near" intersection
             p_info.min_intersect = plane_intersect1;
-            normal = glm::normalize(swapped * axis);
+            p_info.plane = static_cast<Planes>((p_info.ax_index * 2) + swapped);
         }
 
         // The trick : if "far" is closer than "near", then there is NO intersection.
@@ -47,64 +47,52 @@ bool SceneManager::intersectPlanes(const glm::vec3 &axis, std::vector<Object>::i
     return true;
 }
 
-float SceneManager::intersectBox(Ray &r, std::vector<Object>::iterator it, glm::vec3 &normal) {
+PlaneInfo SceneManager::intersectBox(Ray &r, std::vector<Object>::iterator it) {
     // https://www.opengl-tutorial.org/miscellaneous/clicking-on-objects/picking-with-custom-ray-obb-function/
     glm::vec3 center = {it->c.transMat[3].x, it->c.transMat[3].y, it->c.transMat[3].z};
-    planeinfo p_info = {0, 0.f, 0.f, 0.f, 100000.0f};
+    PlaneInfo p_info = {0, 0.f, 0.f, 0.f, 100000.0f, Planes::left};
 
     for (int ax_index = 0; ax_index < 3; ax_index++) {
         glm::vec3 axis = {it->c.transMat[ax_index].x, it->c.transMat[ax_index].y, it->c.transMat[ax_index].z}; 
         p_info.center_proj = glm::dot(axis, (center - r.origin)); // Projection of (center - ray_orig) on axis
         p_info.ray_proj = glm::dot(axis, r.dir); // Projection of ray on axis
         p_info.ax_index = ax_index;
-        if (!intersectPlanes(axis, it, p_info, normal))
-            return -1.f;
+        if (!intersectPlanes(axis, it, p_info)) {
+            p_info.min_intersect = -1.f;
+            return p_info;
+        }
     }
 
-	return p_info.min_intersect;
+	return p_info;
 }
 
-std::vector<Object>::iterator SceneManager::RaycastBoxes(Ray r) {
-    glm::vec3   normal;
-    float       intersection_dist, shortest_dist = 100.0f;
+PlaneHitInfo SceneManager::RaycastBoxes(Ray r) {
+    PlaneInfo   p_info;
+    float       shortest_dist = 100.0f;
+    Planes      plane = Planes::left;
     std::vector<Object>::iterator intersect_it = m_sc.objects.end();
 
     for (std::vector<Object>::iterator it = m_sc.objects.begin(); it != m_sc.objects.end(); it++) {
-        intersection_dist = intersectBox(r, it, normal);
-        std::cout << "Intersection dist: " << intersection_dist << std::endl;
-        if (intersection_dist > -1.f
-            && intersection_dist < shortest_dist) {
-            shortest_dist = intersection_dist;
+        p_info = intersectBox(r, it);
+        if (p_info.min_intersect > -1.f
+            && p_info.min_intersect < shortest_dist) {
+            shortest_dist = p_info.min_intersect;
+            plane = p_info.plane;
             intersect_it = it;
         }
     }
     std::cout << "Shortest dist: " << shortest_dist << std::endl;
-    return intersect_it;
-}
-
-Ray SceneManager::initRay(uint x, uint y) {
-    float halfWidth = float(m_cam.getWidth()) / 2.0f;
-    float halfHeight = float(m_cam.getHeight()) / 2.0f;
-
-    float a = m_cam.getFovX() * ((float(x) - halfWidth + 0.5f) / halfWidth);
-    float b = m_cam.getFovY() * ((halfHeight - float(y) - 0.5f) / halfHeight);
-
-    glm::vec3 dir = glm::normalize(a * m_cam.getRight() + b * m_cam.getUp() + m_cam.getLookDir());
-
-    return {m_cam.getPos(), dir};
+    std::cout << "Plane: " << static_cast<int>(plane) << std::endl;
+    return {intersect_it, plane};
 }
 
 void SceneManager::selectPlane(void) {
-    // Ray         r = initRay(m_cam.getWidth()/2, m_cam.getHeight()/2);
     Ray         r = {m_cam.getPos(), m_cam.getLookDir()};
-    std::vector<Object>::iterator it = this->RaycastBoxes(r);
+    PlaneHitInfo hit = this->RaycastBoxes(r);
 
-    if (it != m_sc.objects.end())
-    {
-        it->material_index = (it->material_index + 1) % 2;
-        return;
-        // std::cout << "Selected cube with pos: x=" << it->c.transMat[3].x
-            // << ", y=" << it->c.transMat[3].y << ", z=" << it->c.transMat[3].x << std::endl;
+    if (hit.first != m_sc.objects.end()) {
+        hit.first->material_index[static_cast<int>(hit.second)] = (hit.first->material_index[static_cast<int>(hit.second)] + 1) % 2;
+        // TODO: Keep box_index in class attribute; if hit.first != prev_hit_index, then change plane color and reset prev box.
     }
 }
 
@@ -114,7 +102,10 @@ void SceneManager::addBox(clock_t last_update, const glm::vec3 &look){
     Object box;
     box.c.transMat = setCenter(position.x, position.y, position.z);
     box.c.halfSize = 1.f;
-    box.material_index = 0;
+
+    int init_materials[6] = {0, 0, 0, 0, 0, 0};
+    std::copy(std::begin(init_materials), std::end(init_materials), std::begin(box.material_index));
+
     box.mass = 5.f;
     m_sc.objects.push_back(box);
     
@@ -132,8 +123,10 @@ void SceneManager::addCompositeBox(clock_t last_update, const glm::vec3 &look) {
     boxB.c.transMat = setCenter(position.x + 2.f, position.y, position.z);
     boxA.c.halfSize = 1.f;
     boxB.c.halfSize = 1.f;
-    boxA.material_index = 0;
-    boxB.material_index = 0;
+
+    int init_materials[6] = {0, 0, 0, 0, 0, 0};
+    std::copy(std::begin(init_materials), std::end(init_materials), std::begin(boxA.material_index));
+    std::copy(std::begin(init_materials), std::end(init_materials), std::begin(boxB.material_index));
     boxA.mass = 5.f;
     boxB.mass = 5.f;
     m_sc.objects.push_back(boxA);
@@ -169,12 +162,12 @@ void SceneManager::readScene()
     srand(time(0));
     m_sc.objects = {
         /* The ground */
-        {{setCenter(0.f, -10.f, 0.f), 10.f}, 1, 0},
+        {{setCenter(0.f, -10.f, 0.f), 10.f}, {1, 1, 1, 1, 1, 1}, 0},
         /* Smol Cubes */
-        {{setCenter(-3.f, 1.f, 2.f), 1.f}, 0, 1},
-        {{setCenter(-3.f, 6.f, 2.f), 1.f}, 0, 1},
-        {{setCenter(-2.5f, 1.5f, -2.f), 1.f}, 0, 1},
-        {{setCenter(4.f, 5.f, -2.f), 1.f}, 0, 1}
+        {{setCenter(-3.f, 1.f, 2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1},
+        {{setCenter(-3.f, 6.f, 2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1},
+        {{setCenter(-2.5f, 1.5f, -2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1},
+        {{setCenter(4.f, 5.f, -2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1}
     };
 
     std::vector<PointLight> p_lights = {

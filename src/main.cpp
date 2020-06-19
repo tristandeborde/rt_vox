@@ -19,7 +19,6 @@ void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &pm, Ren
     GLFWwindow *win = gl.getWindow();
 
     rm.uploadScene(sm.getScene());
-    
     while (win && !glfwWindowShouldClose(win))
     {
         last_update = clock();

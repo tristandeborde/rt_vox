@@ -48,12 +48,15 @@ public:
     void readScene();
 
 private:
-    Camera &m_cam;
-    PhysicsManager &m_pm;
-    RenderingManager &m_rm;
-    SceneManager &m_sm;
+    Camera              &m_cam;
+    PhysicsManager      &m_pm;
+    RenderingManager    &m_rm;
+    SceneManager        &m_sm;
+    int                 m_selection_mat_idx;
+    int                 m_prev_selection_mat_idx;
+    PlaneHitInfo        m_selected_plane;
+    Scene               m_sc;
 
-    Scene m_sc;
     glm::mat4 setCenter(float x, float y, float z);
     Ray initRay(uint x, uint y);
     bool intersectPlanes(const glm::vec3 &axis, std::vector<Object>::iterator it, PlaneInfo &p_info);

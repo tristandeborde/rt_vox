@@ -6,6 +6,8 @@ SceneManager::SceneManager(Camera &cam, PhysicsManager &pm, RenderingManager &rm
     : m_cam(cam), m_pm(pm), m_rm(rm), m_sm(sm) {
     m_sc = Scene();
     this->readScene();
+    m_selection_mat_idx = 1;
+    m_selected_plane = std::make_pair(m_sc.objects.end(), Planes::left);
     return;
 }
 
@@ -90,9 +92,15 @@ void SceneManager::selectPlane(void) {
     Ray         r = {m_cam.getPos(), m_cam.getLookDir()};
     PlaneHitInfo hit = this->RaycastBoxes(r);
 
-    if (hit.first != m_sc.objects.end()) {
-        hit.first->material_index[static_cast<int>(hit.second)] = (hit.first->material_index[static_cast<int>(hit.second)] + 1) % 2;
-        // TODO: Keep box_index in class attribute; if hit.first != prev_hit_index, then change plane color and reset prev box.
+    if (hit.first != m_sc.objects.end() && hit != m_selected_plane) {
+        // Save previous material index for this plane
+        m_prev_selection_mat_idx = hit.first->material_index[static_cast<int>(hit.second)];
+        // Assign selection_material_index for this place
+        hit.first->material_index[static_cast<int>(hit.second)] = m_selection_mat_idx;
+        // Restore previously selected plane's material index
+        if (m_selected_plane.first != m_sc.objects.end())
+            m_selected_plane.first->material_index[static_cast<int>(m_selected_plane.second)] = m_prev_selection_mat_idx;
+        m_selected_plane = hit;
     }
 }
 

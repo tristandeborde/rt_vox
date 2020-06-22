@@ -42,6 +42,7 @@ public:
     SceneManager(SceneManager &src) = delete;
 
     void selectPlane(void);
+    void stickBox(clock_t last_update, const glm::vec3 &look);
     void addBox(clock_t last_update, const glm::vec3 &look);
     void addCompositeBox(clock_t last_update, const glm::vec3 &look);
     Scene &getScene();

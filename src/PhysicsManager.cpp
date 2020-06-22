@@ -57,12 +57,12 @@ btRigidBody *PhysicsManager::addBox(float x, float y, float z, float mass, float
     return body;
 }
 
-void PhysicsManager::stickBox(btRigidBody *pBodyA, btRigidBody *pBodyB){
+void PhysicsManager::stickBox(btRigidBody *pBodyA, btRigidBody *pBodyB, btVector3 &offset){
     btTransform frameInA, frameInB;
     frameInA = btTransform::getIdentity();
     frameInB = btTransform::getIdentity();
-    frameInA.setOrigin(btVector3(1., 0., 0.));
-    frameInB.setOrigin(btVector3(-1., 0., 0.));
+    frameInA.setOrigin(offset);
+    frameInB.setOrigin(-offset);
 
     btFixedConstraint* pFixConstraint = new btFixedConstraint(*pBodyA, *pBodyB, frameInA, frameInB);
     m_world->addConstraint(pFixConstraint, true);
@@ -96,4 +96,8 @@ void PhysicsManager::updateBox(btRigidBody *bt_box, Cube &cube) {
 
 btDynamicsWorld *PhysicsManager::getDynamicsWorld(){
     return m_world;
+}
+
+btRigidBody *PhysicsManager::getBox(int index){
+    return m_btBoxes[index];
 }

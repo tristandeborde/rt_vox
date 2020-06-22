@@ -25,7 +25,8 @@ private:
 
 public:
     btRigidBody *addBox(float x, float y, float z, float mass, float size);
-    void stickBox(btRigidBody *pbodyA, btRigidBody *pbodyB);
+    void stickBox(btRigidBody *pbodyA, btRigidBody *pbodyB, btVector3 &offset);
+    btRigidBody *getBox(int index);
 
     PhysicsManager(float gravity_acceleration);
     PhysicsManager() = delete;

@@ -34,6 +34,14 @@ void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &pm, Ren
                 std::cout << "Adding COMPOSITE at delta = " << last_update - last_key_press << std::endl;
                 sm.addCompositeBox(last_update, cam.getLookDir());
             }
+            else if (gl.isKeyPressed(GLFW_KEY_V)) {
+                std::cout << "Sticking CUBE at delta = " << last_update - last_key_press << std::endl;
+                sm.stickBox(last_update, cam.getLookDir());
+            }
+            else if (gl.isKeyPressed(GLFW_KEY_ESCAPE)) {
+                std::cout << "Exiting..." << std::endl;
+                break;
+            }
             last_key_press = last_update;
         }
         sm.selectPlane();

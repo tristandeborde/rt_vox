@@ -6,7 +6,7 @@ SceneManager::SceneManager(Camera &cam, PhysicsManager &pm, RenderingManager &rm
     : m_cam(cam), m_pm(pm), m_rm(rm), m_sm(sm) {
     m_sc = Scene();
     this->readScene();
-    m_selection_mat_idx = 1;
+    m_selection_mat_idx = 2;
     m_selected_plane = std::make_pair(m_sc.objects.end(), Planes::left);
     return;
 }
@@ -83,8 +83,6 @@ PlaneHitInfo SceneManager::RaycastBoxes(Ray r) {
             intersect_it = it;
         }
     }
-    std::cout << "Shortest dist: " << shortest_dist << std::endl;
-    std::cout << "Plane: " << static_cast<int>(plane) << std::endl;
     return {intersect_it, plane};
 }
 
@@ -92,7 +90,7 @@ void SceneManager::selectPlane(void) {
     Ray         r = {m_cam.getPos(), m_cam.getLookDir()};
     PlaneHitInfo hit = this->RaycastBoxes(r);
 
-    if (hit.first != m_sc.objects.end() && hit != m_selected_plane) {
+    if (hit.first != m_sc.objects.end() && hit != m_selected_plane && hit.first - m_sc.objects.begin() != 0) {
         // Save previous material index for this plane
         m_prev_selection_mat_idx = hit.first->material_index[static_cast<int>(hit.second)];
         // Assign selection_material_index for this place
@@ -147,9 +145,51 @@ void SceneManager::addCompositeBox(clock_t last_update, const glm::vec3 &look) {
     btRigidBody *bodyB = m_pm.addBox(originB.x, originB.y, originB.z, boxB.mass, boxB.c.halfSize);
 
     // Stick boxes together
-    m_pm.stickBox(bodyA, bodyB);
+    btVector3 bt_offset = btVector3(1.f, 0.f, 0.f);
+    m_pm.stickBox(bodyA, bodyB, bt_offset);
 
     // body->setLinearVelocity(btVector3(look.x*5, look.y*5, look.z*5));
+}
+
+void SceneManager::stickBox(clock_t last_update, const glm::vec3 &look){
+    // Get existing box_index
+    int box_index = m_selected_plane.first - m_sc.objects.begin();
+
+    // Compute new box pos
+    glm::vec3 selected_box_pos = m_selected_plane.first->c.transMat[3];
+    int old_box_size = m_selected_plane.first->c.halfSize;
+    glm::vec3 offset(0.f);
+    offset[static_cast<int>(m_selected_plane.second) / 2] = old_box_size;
+    float offset_sign = static_cast<int>(m_selected_plane.second) % 2;
+    offset = offset_sign != 0 ? offset * 1.f : offset * -1.f;
+    std::cout << offset_sign << std::endl;
+    // TODO here: transform offset by transMat
+    glm::vec3 new_box_pos = selected_box_pos + 2.f * offset;
+
+    // Add box to renderer
+    Object new_box;
+    new_box.c.transMat = glm::mat4(m_selected_plane.first->c.transMat);
+    new_box.c.transMat[3][0] = new_box_pos.x;
+    new_box.c.transMat[3][1] = new_box_pos.y;
+    new_box.c.transMat[3][2] = new_box_pos.z;
+    new_box.c.halfSize = old_box_size;
+
+    int init_materials[6] = {0, 0, 0, 0, 0, 0};
+    std::copy(std::begin(init_materials), std::end(init_materials), std::begin(new_box.material_index));
+    new_box.mass = 5.f;
+    m_sc.objects.push_back(new_box);
+
+    // Add box to Bullet Physics
+    glm::vec4 new_origin = new_box.c.transMat[3];
+    btRigidBody *new_body = m_pm.addBox(new_origin.x, new_origin.y, new_origin.z, new_box.mass, new_box.c.halfSize);
+
+    // Get existing box
+    std::cout << box_index << std::endl;
+    btRigidBody *existing_body = m_pm.getBox(box_index);
+
+    // Stick boxes together
+    btVector3 bt_offset = btVector3(offset.x, offset.y, offset.z);
+    m_pm.stickBox(existing_body, new_body, bt_offset);
 }
 
 glm::mat4 SceneManager::setCenter(float x, float y, float z) {
@@ -192,6 +232,7 @@ void SceneManager::readScene()
     std::vector<Material> materials = {
         {glm::vec4(1.0f, 0.5f, 0.31f, 0.f), glm::vec4(1.0f, 0.5f, 0.31f, 0.f), glm::vec4(0.5f, 0.5f, 0.5f, 0.f), 32.0f},
         {glm::vec4(0.1, 0.35, 0.75, 0.f), glm::vec4(1, 1, 1, 0.f), emission_neg, 100.f},
+        {glm::vec4(0.3f, 1.0f, 0.0f, 0.f), glm::vec4(00.3f, 1.0f, 0.0f, 0.f), glm::vec4(0.5f, 0.5f, 0.5f, 0.f), 32.0f},
     };
     m_sc.materials.reserve(materials.size());
     for (const auto &m : materials) {

@@ -1,6 +1,7 @@
 #version 460 core
 
 layout(binding = 0, rgba32f) uniform image2D framebuffer;
+layout(binding = 0) uniform sampler3D shadowTexture;
 
 struct Camera{
     vec3 pos;
@@ -19,6 +20,7 @@ struct Cube {
 struct Object{
     Cube c;
     int material_index[6];
+    float mass;
 };
 
 //attenuation.w : 1 = Point light; 2 = Directional light
@@ -274,6 +276,16 @@ void main(void) {
     vec2    pos = vec2(pix) / vec2(size.x - 1, size.y - 1);
     Ray     r = initRay(pix.x, pix.y);
 
+    if (true) {
+        ivec3 size = textureSize(shadowTexture, 0);
+        float c = textureLod(shadowTexture, vec3(1.0), 0).x;
+        if (size.x == 100)
+            color = vec4(1.f, 0.f, c, 1.f);
+        else
+            color = vec4(1.f);
+        imageStore(framebuffer, pix, color);
+        return;
+    }
     for (uint n = 0; n < reflectionDepth + 1; ++n) {
         float t = FAR_CLIP;
         // Check if the ray hit an object.

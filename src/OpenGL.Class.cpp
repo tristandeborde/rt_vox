@@ -37,15 +37,29 @@ void framebuffer_size_callback(int width, int height) {
     glViewport(0, 0, width, height);
 }
 
+void GLAPIENTRY debugMessageCallback( GLenum source,
+                 GLenum type,
+                 GLuint id,
+                 GLenum severity,
+                 GLsizei length,
+                 const GLchar* message,
+                 const void* userParam )
+{
+    fprintf( stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+           ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" ),
+            type, severity, message );
+}
+
 void OpenGL::initWindow(void) {
     // glfw: initialize and configure
+
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, GL_VERSION_MAJOR);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // uncomment this statement to fix compilation on OS X
 
-    this->_window = glfwCreateWindow(this->_screen_width, this->_screen_height, "LearnOpenGL", NULL, NULL);
+    this->_window = glfwCreateWindow(this->_screen_width, this->_screen_height, "rt_vox", NULL, NULL);
     if (this->_window) {
         glfwMakeContextCurrent(this->_window);
         // glfwSetFramebufferSizeCallback(this->_window, framebuffer_size_callback);
@@ -59,6 +73,9 @@ void OpenGL::initWindow(void) {
     }
 
     glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    // During init, enable debug output
+    glEnable              ( GL_DEBUG_OUTPUT );
+    glDebugMessageCallback( debugMessageCallback, 0 );
 }
 
 GLFWwindow * OpenGL::getWindow() {

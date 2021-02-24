@@ -7,6 +7,7 @@
 # include "ShaderQuad.Class.hpp"
 # include "Camera.hpp"
 
+
 class Raytracer
 {
 public:
@@ -17,7 +18,7 @@ public:
     Raytracer &operator=(Raytracer &src) = delete;
 
     void mainLoop();
-    void render_GPU();
+    void render_GPU(GLuint shadowTexID);
 
     // Utility funcs
     static float    mix(const float &a, const float &b, const float &mix);

@@ -3,8 +3,11 @@
 #include <stdlib.h>
 #include <time.h>
 
-RenderingManager::RenderingManager(GLuint computeShaderID):
-    m_computeShaderID(computeShaderID){
+RenderingManager::RenderingManager(GLuint computeShaderID, int shadow_tex_width, int shadow_tex_height, int shadow_tex_depth)
+    :   m_computeShaderID(computeShaderID),
+        m_stex_width(shadow_tex_width),
+        m_stex_height(shadow_tex_height),
+        m_stex_depth(shadow_tex_depth) {
     this->initialize();
 }
 
@@ -71,6 +74,37 @@ void RenderingManager::initialize()
 
     m_storageBufferIDs = new GLuint[3];
     glGenBuffers(3, m_storageBufferIDs);
+
+    if (SHADOW_TEXTURE)
+        this->initShadowTex();
+}
+
+void RenderingManager::initShadowTex() {
+    glGenTextures(1, &m_shadowTexID);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_3D, m_shadowTexID);
+    glTexStorage3D(GL_TEXTURE_3D, 3, GL_R8, m_stex_width, m_stex_height, m_stex_depth);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_3D, 0);
+}
+
+void RenderingManager::uploadShadowTexture(unsigned char *data, unsigned int len) {
+    assert(len == m_stex_width*m_stex_height*m_stex_depth);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_3D, m_shadowTexID);
+    glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0,
+			     m_stex_width, m_stex_height, m_stex_depth, GL_RED,
+			     GL_UNSIGNED_BYTE, data);
+    glBindTexture(GL_TEXTURE_3D, 0);
+    unsigned char read[len];
+    glBindTexture(GL_TEXTURE_3D, m_shadowTexID);
+    glGetTexImage(GL_TEXTURE_3D, 0, GL_RED, GL_UNSIGNED_BYTE, read);
+    std::cout << int(read[0]) << "," << int(read[len-1]) << std::endl;   // 255.255
+    glBindTexture(GL_TEXTURE_3D, 0);
 }
 
 void RenderingManager::uploadScene(Scene &sc)
@@ -85,6 +119,13 @@ void RenderingManager::uploadObjects(Scene &sc) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_storageBufferIDs[0]);
     // TODO: Copy *existing* buffer data from GPU to CPU, in order to update cleverly only a single cube in whole buffer 
     // glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sc.objects.size() * m_oAlignOffset, (void *)(p));
+    // glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, m_numMaterialsInShader * m_mAlignOffset, p);
+    // if (m_numMaterialsInShader * m_mAlignOffset == 0) {
+    //     glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numMaterialsInShader + sc.materials.size()) * m_mAlignOffset, NULL, GL_STATIC_DRAW);
+    // } else {
+    //     glBufferData(GL_SHADER_STORAGE_BUFFER, (m_numMaterialsInShader + sc.materials.size()) * m_mAlignOffset, p, GL_STATIC_DRAW);
+    //     free(p);
+    // }
 
     // Allocate a Shaderstorage buffer on the GPU memory
     glBufferData(GL_SHADER_STORAGE_BUFFER, sc.objects.size() * m_oAlignOffset, NULL, GL_DYNAMIC_DRAW);
@@ -184,4 +225,24 @@ void RenderingManager::uploadLights(Scene &sc) {
     glUniform1ui(uniID, m_numLightsInShader);
     uniID = glGetUniformLocation(m_computeShaderID, "reflectionDepth");
     glUniform1ui(uniID, m_reflectionDepth);
+}
+
+unsigned int RenderingManager::getStexWidth() {
+    return m_stex_width;
+}
+
+unsigned int RenderingManager::getStexHeight() {
+    return m_stex_height;
+}
+
+unsigned int RenderingManager::getStexDepth() {
+    return m_stex_depth;
+}
+
+unsigned int RenderingManager::getStexSize() {
+    return m_stex_width*m_stex_height*m_stex_depth;
+}
+
+GLuint      RenderingManager::getShadowTexID() {
+    return m_shadowTexID;
 }

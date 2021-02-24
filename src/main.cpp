@@ -9,12 +9,17 @@
 
 #define WIDTH 1280
 #define HEIGHT 1024
+#define SHADOW_TEX_WIDTH 100
+#define SHADOW_TEX_HEIGHT 25
+#define SHADOW_TEX_DEPTH 100
 #define MIN_INPUT_DELTA 120000
 #define DEBUG false
 
 void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &pm, RenderingManager &rm, SceneManager &sm){
     clock_t last_update = clock();
     clock_t last_key_press = last_update;
+    clock_t delta_ticks;
+    clock_t fps = 0;
     
     GLFWwindow *win = gl.getWindow();
 
@@ -48,7 +53,11 @@ void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &pm, Ren
 
         rm.uploadObjects(sm.getScene());
         pm.step(sm.getScene(), last_update);
-        rt.render_GPU();
+        rt.render_GPU(rm.getShadowTexID());
+        delta_ticks = clock() - last_update; //the time, in ms, that took to render the scene
+        if(delta_ticks > 0)
+            fps = CLOCKS_PER_SEC / delta_ticks;
+        std::cout << "FPS: " << fps << std::endl;
         glfwSwapBuffers(win);
     }
 
@@ -72,13 +81,13 @@ int main(int ac, char **av)
     Raytracer rt(&cam, &gl); 
 
     // Create Rendering Manager
-    RenderingManager rm(rt.getComputeShaderID());
+    RenderingManager rm(rt.getComputeShaderID(), SHADOW_TEX_WIDTH, SHADOW_TEX_HEIGHT, SHADOW_TEX_DEPTH);
     
     // Real g: -9.80665
     PhysicsManager pm(-5.f);
 
     // Create SceneManager
-    SceneManager sm(cam, pm, rm, sm);
+    SceneManager sm(cam, pm, rm);
     sm.readScene(); // TODO: parser to read .obj files directly
 
     pm.addObjects(sm.getScene());

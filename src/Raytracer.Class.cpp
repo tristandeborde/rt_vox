@@ -6,6 +6,7 @@
 #include <cassert>
 #include "Raytracer.Class.hpp"
 #include "SceneManager.hpp"
+#include "RenderingManager.hpp"
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 
@@ -35,7 +36,7 @@ Raytracer::~Raytracer() {
     return;
 }
 
-void Raytracer::render_GPU(void) {
+void Raytracer::render_GPU(GLuint shadowTexID) {
     this->_cShader->use();
 
     /* Set viewing frustum corner rays in shader */
@@ -51,6 +52,12 @@ void Raytracer::render_GPU(void) {
     /* Bind level 0 of framebuffer texture as writable image in the shader. */
     glBindImageTexture(0, this->_tex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
+    /* Bind shadowtexture. */
+    if (SHADOW_TEXTURE) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_3D, shadowTexID);
+    }
+
     /* Compute appropriate invocation dimension. */
     int worksizeX = Raytracer::nextPowerOfTwo(this->_width);
     int worksizeY = Raytracer::nextPowerOfTwo(this->_height);
@@ -61,6 +68,7 @@ void Raytracer::render_GPU(void) {
     glDispatchCompute(worksizeX / workGroupSizeX, worksizeY / workGroupSizeY, 1);
 
     /* Reset image binding. */
+    glBindTexture(GL_TEXTURE_3D, 0);
     glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     glUseProgram(0);
@@ -101,7 +109,7 @@ void Raytracer::quadFullScreenVao() {
 void Raytracer::createFramebufferTexture() {
     glGenTextures(1, &this->_tex);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, this->_tex);
+    glBindTexture(GL_TEXTURE_2D, this->_tex); // TODO: NOT Supposed to be necessary if image and not texture
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, this->_width, this->_height, 0, GL_RGBA, GL_FLOAT, NULL);

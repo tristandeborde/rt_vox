@@ -35,7 +35,7 @@ typedef std::pair<std::vector<Object>::iterator, Planes> PlaneHitInfo;
 class SceneManager
 {
 public:
-    SceneManager(Camera &cam, PhysicsManager &pm, RenderingManager &rm, SceneManager &sm);
+    SceneManager(Camera &cam, PhysicsManager &pm, RenderingManager &rm);
     SceneManager() = delete;
     ~SceneManager();
     SceneManager &operator=(SceneManager &src) = delete;
@@ -47,12 +47,12 @@ public:
     void addCompositeBox(clock_t last_update, const glm::vec3 &look);
     Scene &getScene();
     void readScene();
+    void generateWorld(int l, int w, int h);
 
 private:
     Camera              &m_cam;
     PhysicsManager      &m_pm;
     RenderingManager    &m_rm;
-    SceneManager        &m_sm;
     int                 m_selection_mat_idx;
     int                 m_prev_selection_mat_idx;
     PlaneHitInfo        m_selected_plane;

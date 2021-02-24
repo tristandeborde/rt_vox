@@ -54,7 +54,7 @@ struct Scene
     // Will be needed for uploading the scene in the SceneManager.
     static const unsigned int m_NumAttributesLights = 3;
     static const unsigned int m_NumAttributesMaterial = 4;
-    static const unsigned int m_NumAttributesObjects = 4;
+    static const unsigned int m_NumAttributesObjects = 3;
 
 
     unsigned int numObjects()

@@ -2,8 +2,8 @@
 #include <iostream>
 #include <glm/glm.hpp>
 
-SceneManager::SceneManager(Camera &cam, PhysicsManager &pm, RenderingManager &rm, SceneManager &sm)
-    : m_cam(cam), m_pm(pm), m_rm(rm), m_sm(sm) {
+SceneManager::SceneManager(Camera &cam, PhysicsManager &pm, RenderingManager &rm)
+    : m_cam(cam), m_pm(pm), m_rm(rm) {
     m_sc = Scene();
     this->readScene();
     m_selection_mat_idx = 2;
@@ -210,13 +210,14 @@ void SceneManager::readScene()
     srand(time(0));
     m_sc.objects = {
         /* The ground */
-        {{setCenter(0.f, -10.f, 0.f), 10.f}, {1, 1, 1, 1, 1, 1}, 0},
+        // {{setCenter(0.f, -10.f, 0.f), 10.f}, {1, 1, 1, 1, 1, 1}, 0},
         /* Smol Cubes */
         {{setCenter(-3.f, 1.f, 2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1},
         {{setCenter(-3.f, 6.f, 2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1},
         {{setCenter(-2.5f, 1.5f, -2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1},
         {{setCenter(4.f, 5.f, -2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1}
     };
+    this->generateWorld(40,10,40);
 
     std::vector<PointLight> p_lights = {
         {glm::vec4(0.f, 10.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 1.f, 0.f), glm::vec4(0.f, 0.f, 0.5f, 1.f)},
@@ -242,4 +243,25 @@ void SceneManager::readScene()
 
 Scene &SceneManager::getScene(){
     return m_sc;
+}
+
+void SceneManager::generateWorld(int l, int w, int h) {
+    unsigned int shadow_tex_size = m_rm.getStexSize();
+    unsigned char data[shadow_tex_size];
+
+    for (int i = 0; i<250000; i++) {
+        data[i] = 255;
+    }
+    for (int i=-20; i < l; i+=2) {
+        for (int j=-4; j < w; j+=2) {
+            for (int k=-20; k < h; k+=2) {
+                // object_data = map[i][j][k]
+                if (j == 0.f) {
+                    m_sc.objects.push_back({{setCenter(i, j, k), 1.f}, {0, 0, 0, 0, 0, 0}, 0});
+                }
+            }
+        }
+    }
+    if (SHADOW_TEXTURE)
+        m_rm.uploadShadowTexture(data, shadow_tex_size);
 }

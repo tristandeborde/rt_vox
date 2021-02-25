@@ -57,13 +57,16 @@ private:
     int                 m_prev_selection_mat_idx;
     PlaneHitInfo        m_selected_plane;
     Scene               m_sc;
+    float               m_cube_radius;
+    std::vector<std::vector<std::vector<float>>> m_all_centroids;
 
     glm::mat4 setCenter(float x, float y, float z);
     Ray initRay(uint x, uint y);
     bool intersectPlanes(const glm::vec3 &axis, std::vector<Object>::iterator it, PlaneInfo &p_info);
     PlaneInfo intersectBox(Ray &r, std::vector<Object>::iterator it);
     PlaneHitInfo RaycastBoxes(Ray r);
+    void initAllCentroids(int level_count);
+    std::vector<std::vector<int>> initCentroid(int level);
 
-};
 
 #endif

@@ -41,6 +41,7 @@ struct Object
     Cube c;
     int material_index[6];
     float mass;
+    glm::vec4   shadow_position;
 };
 
 struct Scene

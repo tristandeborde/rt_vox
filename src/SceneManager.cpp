@@ -1,6 +1,10 @@
 #include "SceneManager.hpp"
 #include <iostream>
 #include <glm/glm.hpp>
+#include <cmath>
+#define CUBE_SIZE 5 // in centimeters
+#define LOWEST_VOXEL_SIZE CUBE_SIZE*2 // in centimeters
+
 
 SceneManager::SceneManager(Camera &cam, PhysicsManager &pm, RenderingManager &rm)
     : m_cam(cam), m_pm(pm), m_rm(rm) {
@@ -8,6 +12,7 @@ SceneManager::SceneManager(Camera &cam, PhysicsManager &pm, RenderingManager &rm
     this->readScene();
     m_selection_mat_idx = 2;
     m_selected_plane = std::make_pair(m_sc.objects.end(), Planes::left);
+    m_cube_radius = glm::sqrt(2*(pow(CUBE_SIZE/2)));
     return;
 }
 
@@ -246,22 +251,63 @@ Scene &SceneManager::getScene(){
 }
 
 void SceneManager::generateWorld(int l, int w, int h) {
-    unsigned int shadow_tex_size = m_rm.getStexSize();
-    unsigned char data[shadow_tex_size];
-
-    for (int i = 0; i<250000; i++) {
-        data[i] = 255;
-    }
-    for (int i=-20; i < l; i+=2) {
-        for (int j=-4; j < w; j+=2) {
-            for (int k=-20; k < h; k+=2) {
+    for (int i=-20.f; i < l; i+=2) {
+        for (int j=-4.f; j < w; j+=2) {
+            for (int k=-20.f; k < h; k+=2) {
                 // object_data = map[i][j][k]
                 if (j == 0.f) {
                     m_sc.objects.push_back({{setCenter(i, j, k), 1.f}, {0, 0, 0, 0, 0, 0}, 0});
+                if (SHADOW_TEXTURE)
+                    this->updateEntireShadowTexture(glm::vec3(i, j, k));
                 }
             }
         }
     }
-    if (SHADOW_TEXTURE)
-        m_rm.uploadShadowTexture(data, shadow_tex_size);
+}
+
+void SceneManager::updateEntireShadowTexture(glm::vec3 vox_pos) {
+    std::vector<std::vector<float>> &centroid_set = m_all_centroids[0]
+    std::vector<float> &x_axis_centroids = centroid_set[0];
+
+    auto start = std::lower_bound(x_axis_centroids.begin(), x_axis_centroids.end(), vox_pos - m_cube_radius);
+    auto end = std::upper_bound(x_axis_centroids.begin(), x_axis_centroids.end(), vox_pos - m_cube_radius);
+    for (auto it = start; it != end; it++) {
+        std::cout << *it << " ";
+    }
+    
+
+    // Update texture
+    m_rm.updateShadowTexture(0, x_offset, y_offset, z_offset, data));
+    m_rm.updateShadowTexture(1, x_offset, y_offset, z_offset, data));
+    m_rm.updateShadowTexture(2, x_offset, y_offset, z_offset, data));
+}
+
+void SceneManager::initAllCentroids(int level_count) {
+    // Initialize all possible centroids used for shadowtexture rasterization
+    for (int level; level < level_count; level++) {
+        m_all_centroids.push_back(this->initCentroid(level));
+    }
+}
+
+std::vector<std::vector<float>> SceneManager::initCentroid(int level) {
+    std::vector<std::vector<float>> centroids_set;
+
+    int curr_voxel_len = LOWEST_VOXEL_SIZE * pow(2, level);
+    int voxels_per_meter = 100 / curr_voxel_len;
+    std::vector<float> x_axis_centroids(m_rm.getStexWidth()*voxels_per_meter);
+    centroids_set.push_back(x_axis_centroids);
+    std::vector<float> y_axis_centroids(m_rm.getStexHeight()*voxels_per_meter);
+    centroids_set.push_back(y_axis_centroids);
+    std::vector<float> z_axis_centroids(m_rm.getStexDepth()*voxels_per_meter);
+    centroids_set.push_back(z_axis_centroids);
+    
+    float curr_pos;
+    for (auto &centroid_axis: centroids_set) {
+        curr_pos = -(m_rm.getStexWidth()/2-curr_voxel_len/2); // Starting point of centroid vector
+        for (auto &centroid: centroid_axis) {
+            centroid = curr_pos;
+            curr_pos += curr_voxel_len;
+        }
+    }
+    return centroids_set;
 }

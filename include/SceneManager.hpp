@@ -58,6 +58,7 @@ private:
     PlaneHitInfo        m_selected_plane;
     Scene               m_sc;
     float               m_cube_radius;
+    std::vector <Object> m_objects;
     std::vector<std::vector<std::vector<float>>> m_all_centroids;
 
     glm::mat4 setCenter(float x, float y, float z);
@@ -66,7 +67,8 @@ private:
     PlaneInfo intersectBox(Ray &r, std::vector<Object>::iterator it);
     PlaneHitInfo RaycastBoxes(Ray r);
     void initAllCentroids(int level_count);
-    std::vector<std::vector<int>> initCentroid(int level);
+    std::vector<std::vector<float>> initCentroid(int level);
+    void updateShadowTextureOneBox(glm::vec3 box_pos);
 
-
+};
 #endif

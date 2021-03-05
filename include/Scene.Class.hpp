@@ -38,10 +38,10 @@ struct Material
 
 struct Object
 {
-    Cube c;
-    int material_index[6];
-    float mass;
-    glm::vec4   shadow_position;
+    Cube        c;
+    glm::vec3   nearest_lowest_voxel; // Changing order will break padding!
+    float       mass;
+    int         material_index[6];
 };
 
 struct Scene

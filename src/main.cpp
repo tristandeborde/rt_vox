@@ -88,7 +88,6 @@ int main(int ac, char **av)
 
     // Create SceneManager
     SceneManager sm(cam, pm, rm);
-    sm.readScene(); // TODO: parser to read .obj files directly
 
     pm.addObjects(sm.getScene());
 

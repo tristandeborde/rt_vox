@@ -2,17 +2,21 @@
 #include <iostream>
 #include <glm/glm.hpp>
 #include <cmath>
+#include <algorithm>
 #define CUBE_SIZE 5 // in centimeters
-#define LOWEST_VOXEL_SIZE CUBE_SIZE*2 // in centimeters
+#define LOWEST_VOXEL_SIZE CUBE_SIZE*2
+#define LEVEL_COUNT 3
 
 
 SceneManager::SceneManager(Camera &cam, PhysicsManager &pm, RenderingManager &rm)
     : m_cam(cam), m_pm(pm), m_rm(rm) {
     m_sc = Scene();
+    m_objects.reserve(1000);
+    m_cube_radius = glm::sqrt(2*(pow(CUBE_SIZE/2, 2)));
+    this->initAllCentroids(LEVEL_COUNT);
     this->readScene();
     m_selection_mat_idx = 2;
     m_selected_plane = std::make_pair(m_sc.objects.end(), Planes::left);
-    m_cube_radius = glm::sqrt(2*(pow(CUBE_SIZE/2)));
     return;
 }
 
@@ -212,16 +216,15 @@ void SceneManager::readScene()
     /* TODO: Create obj file parser
     auto data = reader.getData(); */
 
-    srand(time(0));
-    m_sc.objects = {
-        /* The ground */
-        // {{setCenter(0.f, -10.f, 0.f), 10.f}, {1, 1, 1, 1, 1, 1}, 0},
-        /* Smol Cubes */
-        {{setCenter(-3.f, 1.f, 2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1},
-        {{setCenter(-3.f, 6.f, 2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1},
-        {{setCenter(-2.5f, 1.5f, -2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1},
-        {{setCenter(4.f, 5.f, -2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1}
-    };
+    // m_sc.objects = {
+    //     /* The ground */
+    //     // {{setCenter(0.f, -10.f, 0.f), 10.f}, {1, 1, 1, 1, 1, 1}, 0},
+    //     /* Smol Cubes */
+    //     {{setCenter(-3.f, 1.f, 2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1, {0.,0.,0.}},
+    //     {{setCenter(-3.f, 6.f, 2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1, {0.,0.,0.}},
+    //     {{setCenter(-2.5f, 1.5f, -2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1, {0.,0.,0.}},
+    //     {{setCenter(4.f, 5.f, -2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1, {0.,0.,0.}},
+    // };
     this->generateWorld(40,10,40);
 
     std::vector<PointLight> p_lights = {
@@ -251,40 +254,65 @@ Scene &SceneManager::getScene(){
 }
 
 void SceneManager::generateWorld(int l, int w, int h) {
+    Object curr_cube;
     for (int i=-20.f; i < l; i+=2) {
         for (int j=-4.f; j < w; j+=2) {
             for (int k=-20.f; k < h; k+=2) {
                 // object_data = map[i][j][k]
                 if (j == 0.f) {
-                    m_sc.objects.push_back({{setCenter(i, j, k), 1.f}, {0, 0, 0, 0, 0, 0}, 0});
-                if (SHADOW_TEXTURE)
-                    this->updateEntireShadowTexture(glm::vec3(i, j, k));
+                    curr_cube.c = {setCenter(i, j, k), 1.f};
+                    int init_materials[6] = {0, 0, 0, 0, 0, 0};
+                    std::copy(std::begin(init_materials), std::end(init_materials), std::begin(curr_cube.material_index));
+                    curr_cube.mass = 0;
+                    curr_cube.nearest_lowest_voxel = {0.,0.,0.};
+                    m_sc.objects.push_back(curr_cube);
+                    if (SHADOW_TEXTURE)
+                        this->updateShadowTextureOneBox(glm::vec3(i, j, k));
                 }
             }
         }
     }
 }
 
-void SceneManager::updateEntireShadowTexture(glm::vec3 vox_pos) {
-    std::vector<std::vector<float>> &centroid_set = m_all_centroids[0]
-    std::vector<float> &x_axis_centroids = centroid_set[0];
+void SceneManager::updateShadowTextureOneBox(glm::vec3 box_pos) {
+    float max_voxel_reach = (m_cube_radius + LOWEST_VOXEL_SIZE); // Max dist between box center and intersecting voxel's center
+    unsigned char data = 1;
+    for (int mip_level = 0; mip_level < LEVEL_COUNT; mip_level++) {
+        std::vector<glm::vec3> final_candidates;
+        std::vector<std::vector<float>> &centroid_set = m_all_centroids[mip_level];
+        std::vector<std::vector<float>> all_candidates;
 
-    auto start = std::lower_bound(x_axis_centroids.begin(), x_axis_centroids.end(), vox_pos - m_cube_radius);
-    auto end = std::upper_bound(x_axis_centroids.begin(), x_axis_centroids.end(), vox_pos - m_cube_radius);
-    for (auto it = start; it != end; it++) {
-        std::cout << *it << " ";
+        // Ugly but more precise coarse check;
+        // TODO if too slow, replace by regular cube's sphere vs voxel's sphere check
+        for (int axis_index = 0; axis_index < 3; axis_index++) {
+            std::vector<float> &axis_centroids = centroid_set[axis_index];
+            std::vector<float> axis_candidates;
+            auto start = std::lower_bound(axis_centroids.begin(), axis_centroids.end(), box_pos[axis_index] - max_voxel_reach);
+            auto end = std::upper_bound(axis_centroids.begin(), axis_centroids.end(), box_pos[axis_index] + max_voxel_reach);
+            for (auto it = start; it != end; it++) {
+                axis_candidates.push_back(*it);
+            }
+            all_candidates.push_back(axis_candidates);
+        }
+        
+        for (auto &x_candidate: all_candidates[0]) {
+            for (auto &y_candidate: all_candidates[1]) {
+                for (auto &z_candidate: all_candidates[2]) {
+                    final_candidates.push_back({x_candidate, y_candidate, z_candidate});
+                }
+            }
+        }
+        // TODO: Box-box intersection test to get rid of some candidates
+        for (auto candidate: final_candidates) {
+            // Update texture
+            m_rm.updateShadowTexture(mip_level, candidate.x, candidate.y, candidate.z, &data);
+        }
     }
-    
-
-    // Update texture
-    m_rm.updateShadowTexture(0, x_offset, y_offset, z_offset, data));
-    m_rm.updateShadowTexture(1, x_offset, y_offset, z_offset, data));
-    m_rm.updateShadowTexture(2, x_offset, y_offset, z_offset, data));
 }
 
 void SceneManager::initAllCentroids(int level_count) {
     // Initialize all possible centroids used for shadowtexture rasterization
-    for (int level; level < level_count; level++) {
+    for (int level = 0; level < level_count; level++) {
         m_all_centroids.push_back(this->initCentroid(level));
     }
 }
@@ -303,7 +331,7 @@ std::vector<std::vector<float>> SceneManager::initCentroid(int level) {
     
     float curr_pos;
     for (auto &centroid_axis: centroids_set) {
-        curr_pos = -(m_rm.getStexWidth()/2-curr_voxel_len/2); // Starting point of centroid vector
+        curr_pos = -(m_rm.getStexWidth()*100/2-curr_voxel_len/2); // Starting point of centroid vector
         for (auto &centroid: centroid_axis) {
             centroid = curr_pos;
             curr_pos += curr_voxel_len;

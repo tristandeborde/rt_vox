@@ -92,10 +92,10 @@ void RenderingManager::initShadowTex() {
     glBindTexture(GL_TEXTURE_3D, 0);
 }
 
-void RenderingManager::updateShadowTexture(int level, int x_offset, int y_offset, int z_offset, unsigned char *data) {
+void RenderingManager::updateShadowTexture(int level, int x_offset, int y_offset, int z_offset, int width, int height, int depth, unsigned char *data) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, m_shadowTexID);
-    glTexSubImage3D(GL_TEXTURE_3D, level, x_offset, y_offset, z_offset, m_stex_width, m_stex_height, m_stex_depth, GL_RED, GL_UNSIGNED_BYTE, data);
+    glTexSubImage3D(GL_TEXTURE_3D, level, x_offset, y_offset, z_offset, width, height, depth, GL_RED, GL_UNSIGNED_BYTE, data);
     glBindTexture(GL_TEXTURE_3D, 0);
 }
 

@@ -19,7 +19,7 @@ public:
     RenderingManager(RenderingManager &) = delete;
     RenderingManager &operator=(RenderingManager &) = delete;
 
-    void updateShadowTexture(int level, int x_offset, int y_offset, int z_offset, unsigned char *data);
+    void updateShadowTexture(int level, int x_offset, int y_offset, int z_offset, int width, int height, int depth, unsigned char *data);
     void uploadScene(Scene &sc);
     void uploadObjects(Scene &sc);
     Object addBox(float x, float y, float z);

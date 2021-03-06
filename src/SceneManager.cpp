@@ -305,7 +305,7 @@ void SceneManager::updateShadowTextureOneBox(glm::vec3 box_pos) {
         // TODO: Box-box intersection test to get rid of some candidates
         for (auto candidate: final_candidates) {
             // Update texture
-            m_rm.updateShadowTexture(mip_level, candidate.x, candidate.y, candidate.z, &data);
+            m_rm.updateShadowTexture(mip_level, candidate.x, candidate.y, candidate.z, 1, 1, 1, &data);
         }
     }
 }
@@ -319,6 +319,7 @@ void SceneManager::initAllCentroids(int level_count) {
 
 std::vector<std::vector<float>> SceneManager::initCentroid(int level) {
     std::vector<std::vector<float>> centroids_set;
+    glm:vec3 dim_sizes = m_rm.getStexDims();
 
     int curr_voxel_len = LOWEST_VOXEL_SIZE * pow(2, level);
     int voxels_per_meter = 100 / curr_voxel_len;
@@ -330,12 +331,14 @@ std::vector<std::vector<float>> SceneManager::initCentroid(int level) {
     centroids_set.push_back(z_axis_centroids);
     
     float curr_pos;
+    int i = 0;
     for (auto &centroid_axis: centroids_set) {
-        curr_pos = -(m_rm.getStexWidth()*100/2-curr_voxel_len/2); // Starting point of centroid vector
+        curr_pos = -(dim_sizes[i]*voxels_per_meter/2-curr_voxel_len/2); // Starting point of centroid vector
         for (auto &centroid: centroid_axis) {
             centroid = curr_pos;
             curr_pos += curr_voxel_len;
         }
+        i++;
     }
     return centroids_set;
 }

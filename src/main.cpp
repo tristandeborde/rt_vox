@@ -9,9 +9,9 @@
 
 #define WIDTH 1280
 #define HEIGHT 1024
-#define SHADOW_TEX_WIDTH 100
-#define SHADOW_TEX_HEIGHT 26
-#define SHADOW_TEX_DEPTH 100
+#define SHADOW_TEX_WIDTH 1000 // in decimeters
+#define SHADOW_TEX_HEIGHT 260 // in decimeters
+#define SHADOW_TEX_DEPTH 1000 // in decimeters
 #define MIN_INPUT_DELTA 120000
 #define DEBUG false
 

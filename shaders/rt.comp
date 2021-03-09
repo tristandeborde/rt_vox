@@ -245,42 +245,47 @@ int intersectBox(Ray r, int box_index, out float intersection_dist, out vec3 nor
     return p_info.plane_index;
 }
 
-HitInfo intersectBoxes(Ray r) {
-    vec3    normal;
-    float   intersection_dist;
-    int     plane_index;
-    HitInfo h_info = {vec3(0.f), FAR_CLIP, numObj, 0};
+// HitInfo intersectBoxes(Ray r) {
+//     vec3    normal;
+//     float   intersection_dist;
+//     int     plane_index;
+//     HitInfo h_info = {vec3(0.f), FAR_CLIP, numObj, 0};
 
-    for (int box_index = 0; box_index < numObj; box_index++) {
-        if ((plane_index = intersectBox(r, box_index, intersection_dist, normal)) != -1
-            && intersection_dist < h_info.intersection_dist) {
-            h_info.intersection_dist = intersection_dist;
-            h_info.box_index = box_index;
-            h_info.normal = normal;
-            h_info.plane_index = plane_index;
-        }
-    }
-    return h_info;
-}
+//     for (int box_index = 0; box_index < numObj; box_index++) {
+//         if ((plane_index = intersectBox(r, box_index, intersection_dist, normal)) != -1
+//             && intersection_dist < h_info.intersection_dist) {
+//             h_info.intersection_dist = intersection_dist;
+//             h_info.box_index = box_index;
+//             h_info.normal = normal;
+//             h_info.plane_index = plane_index;
+//         }
+//     }
+//     return h_info;
+// }
 
 // From: https://medium.com/@calebleak/raymarching-voxel-rendering-58018201d9d6
-vec4 March(Ray r) {
+vec3 March(Ray r) {
     int level = 2;
     float t = 0;
+    int voxel_size = 4;
     while (t <= maxDistToCheck) {
         vec3 curr_point = r.origin + r.dir * t;
         ivec3 texture_size = textureSize(shadowTexture, level);
         vec4 c = textureLod(shadowTexture, curr_point / texture_size, level);
         if (c == 1) {
+            if (level == 1)
+                return (curr_point);
             level--;
-        //   return c;
+            voxel_size /= 2;
         }
-
-        vec3 deltas = (step(0, r.dir) - fract(curr_point)) / r.dir; // replace with step( 0, abs(dir) ) * sign( dir )
+        // Compute distance to the closest voxels in each axis
+        vec3 closest_voxels = (step(0, abs(dir)) * sign(dir) * voxel_size - mod(curr_point, voxel_size));
+        // Compute all ts by which to multiply ray to reach closest voxels
+        vec3 deltas = closest_voxels / r.dir;
+        // Choose lowest t
         t += max(mincomp(deltas), epsilon);
     }
-
-    return vec4(0);
+    return vec3(FLT_MAX, 0, 0);
 }
 
 while ()
@@ -310,8 +315,10 @@ void main(void) {
     // }
     for (uint n = 0; n < reflectionDepth + 1; ++n) {
         float t = FAR_CLIP;
-        // Check if the ray hit an object.
-        h_info = intersectBoxes(r);
+        // Check if the ray hit a non-empty voxel.
+        vec3 voxel = March(r);
+        if (voxel != vec3(FLT_MAX, FLT_MAX, FLT_MAX))
+        h_info = 
         if(h_info.intersection_dist < t && h_info.intersection_dist >= -0.001f)
             t = h_info.intersection_dist;
 

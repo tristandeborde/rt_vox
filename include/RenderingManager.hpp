@@ -9,6 +9,9 @@
 # include <cstring>
 # include <vector>
 # include "Scene.Class.hpp"
+# define CUBE_SIZE 0.5 // in decimeters
+# define LOWEST_VOXEL_SIZE CUBE_SIZE*2
+# define LEVEL_COUNT 3
 
 class RenderingManager
 {

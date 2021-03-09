@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 
+
 RenderingManager::RenderingManager(GLuint computeShaderID, int shadow_tex_width, int shadow_tex_height, int shadow_tex_depth)
     :   m_computeShaderID(computeShaderID),
         m_stex_width(shadow_tex_width),
@@ -83,7 +84,7 @@ void RenderingManager::initShadowTex() {
     glGenTextures(1, &m_shadowTexID);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, m_shadowTexID);
-    glTexStorage3D(GL_TEXTURE_3D, 3, GL_R8, m_stex_width, m_stex_height, m_stex_depth);
+    glTexStorage3D(GL_TEXTURE_3D, 3, GL_R8, m_stex_width/LOWEST_VOXEL_SIZE, m_stex_height/LOWEST_VOXEL_SIZE, m_stex_depth/LOWEST_VOXEL_SIZE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);

@@ -3,9 +3,6 @@
 #include <glm/glm.hpp>
 #include <cmath>
 #include <algorithm>
-#define CUBE_SIZE 5 // in centimeters
-#define LOWEST_VOXEL_SIZE CUBE_SIZE*2
-#define LEVEL_COUNT 3
 
 
 SceneManager::SceneManager(Camera &cam, PhysicsManager &pm, RenderingManager &rm)
@@ -277,6 +274,7 @@ void SceneManager::generateWorld(int l, int w, int h) {
 void SceneManager::updateShadowTextureOneBox(glm::vec3 box_pos) {
     float max_voxel_reach = (m_cube_radius + LOWEST_VOXEL_SIZE); // Max dist between box center and intersecting voxel's center
     unsigned char data = 1;
+
     for (int mip_level = 0; mip_level < LEVEL_COUNT; mip_level++) {
         std::vector<glm::vec3> final_candidates;
         std::vector<std::vector<float>> &centroid_set = m_all_centroids[mip_level];
@@ -322,18 +320,17 @@ std::vector<std::vector<float>> SceneManager::initCentroid(int level) {
     glm:vec3 dim_sizes = m_rm.getStexDims();
 
     int curr_voxel_len = LOWEST_VOXEL_SIZE * pow(2, level);
-    int voxels_per_meter = 100 / curr_voxel_len;
-    std::vector<float> x_axis_centroids(m_rm.getStexWidth()*voxels_per_meter);
+    std::vector<float> x_axis_centroids(m_rm.getStexWidth()/curr_voxel_len);
     centroids_set.push_back(x_axis_centroids);
-    std::vector<float> y_axis_centroids(m_rm.getStexHeight()*voxels_per_meter);
+    std::vector<float> y_axis_centroids(m_rm.getStexHeight()/curr_voxel_len);
     centroids_set.push_back(y_axis_centroids);
-    std::vector<float> z_axis_centroids(m_rm.getStexDepth()*voxels_per_meter);
+    std::vector<float> z_axis_centroids(m_rm.getStexDepth()/curr_voxel_len);
     centroids_set.push_back(z_axis_centroids);
     
     float curr_pos;
     int i = 0;
     for (auto &centroid_axis: centroids_set) {
-        curr_pos = -(dim_sizes[i]*voxels_per_meter/2-curr_voxel_len/2); // Starting point of centroid vector
+        curr_pos = -(dim_sizes[i]/2-curr_voxel_len/2); // Starting point of centroid vector
         for (auto &centroid: centroid_axis) {
             centroid = curr_pos;
             curr_pos += curr_voxel_len;

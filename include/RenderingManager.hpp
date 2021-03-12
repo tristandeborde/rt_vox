@@ -10,7 +10,7 @@
 # include <vector>
 # include "Scene.Class.hpp"
 # define CUBE_SIZE 0.5 // in decimeters
-# define LOWEST_VOXEL_SIZE CUBE_SIZE*2
+# define LOWEST_VOXEL_SIZE 1
 # define LEVEL_COUNT 3
 
 class RenderingManager
@@ -22,7 +22,7 @@ public:
     RenderingManager(RenderingManager &) = delete;
     RenderingManager &operator=(RenderingManager &) = delete;
 
-    void updateShadowTexture(int level, int x_offset, int y_offset, int z_offset, int width, int height, int depth, unsigned char *data);
+    void updateShadowTexture(int level, float x_offset, float y_offset, float z_offset, int width, int height, int depth, unsigned char *data);
     void uploadScene(Scene &sc);
     void uploadObjects(Scene &sc);
     Object addBox(float x, float y, float z);
@@ -32,6 +32,7 @@ public:
     glm::vec3       getStexDims();
     unsigned int    getStexSize();
     GLuint          getShadowTexID();
+    void            getShadowTexture();
 
 private:
     GLuint          m_computeShaderID;
@@ -58,7 +59,7 @@ private:
     int *m_mOffsets = nullptr;
     int *m_lOffsets = nullptr;
 
-    void initShadowTex();
+    void initShadowTex(int level_count);
     void initialize();
     void uploadMaterials(Scene &sc);
     void uploadLights(Scene &sc);

@@ -2,6 +2,7 @@
 #include "Shader.Class.hpp"
 #include <stdlib.h>
 #include <time.h>
+#include <set>
 
 
 RenderingManager::RenderingManager(GLuint computeShaderID, int shadow_tex_width, int shadow_tex_height, int shadow_tex_depth)
@@ -18,7 +19,7 @@ RenderingManager::~RenderingManager() {
 
 void RenderingManager::initialize()
 {
-    const GLchar* oNames[] = {"objects[0].c.transMat", "objects[0].c.halfSize", "objects[0].material_index"};
+    const GLchar* oNames[] = {"objects[0].c.transMat", "objects[0].c.halfSize", "objects[0].material_index", "objects[0].containing_voxels", "objects[0].containing_voxels_count"};
     const GLchar* mNames[] = {"materials[0].diffuse", "materials[0].specularity", "materials[0].emission", "materials[0].shininess"};
     const GLchar* lNames[] = {"lights[0].pos_dir", "lights[0].color", "lights[0].attenuation"};
 
@@ -77,14 +78,14 @@ void RenderingManager::initialize()
     glGenBuffers(3, m_storageBufferIDs);
 
     if (SHADOW_TEXTURE)
-        this->initShadowTex();
+        this->initShadowTex(LEVEL_COUNT);
 }
 
-void RenderingManager::initShadowTex() {
+void RenderingManager::initShadowTex(int level_count) {
     glGenTextures(1, &m_shadowTexID);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, m_shadowTexID);
-    glTexStorage3D(GL_TEXTURE_3D, 3, GL_R8, m_stex_width/LOWEST_VOXEL_SIZE, m_stex_height/LOWEST_VOXEL_SIZE, m_stex_depth/LOWEST_VOXEL_SIZE);
+    glTexStorage3D(GL_TEXTURE_3D, level_count, GL_R8I, m_stex_width, m_stex_height, m_stex_depth);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -93,11 +94,27 @@ void RenderingManager::initShadowTex() {
     glBindTexture(GL_TEXTURE_3D, 0);
 }
 
-void RenderingManager::updateShadowTexture(int level, int x_offset, int y_offset, int z_offset, int width, int height, int depth, unsigned char *data) {
+void RenderingManager::updateShadowTexture(int level, float x_offset, float y_offset, float z_offset, int width, int height, int depth, unsigned char *data) {
+    float norm_x_offset = (x_offset + 20.0) / 40.0 * static_cast<float>(m_stex_width/glm::pow(2, level));
+    float norm_y_offset = (y_offset + 6.0) / 12.0 * static_cast<float>(m_stex_height/glm::pow(2, level));
+    float norm_z_offset = (z_offset + 20.0) / 40.0 * static_cast<float>(m_stex_depth/glm::pow(2, level));
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, m_shadowTexID);
-    glTexSubImage3D(GL_TEXTURE_3D, level, x_offset, y_offset, z_offset, width, height, depth, GL_RED, GL_UNSIGNED_BYTE, data);
+    glTexSubImage3D(GL_TEXTURE_3D, level, norm_x_offset, norm_y_offset, norm_z_offset, width, height, depth, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
     glBindTexture(GL_TEXTURE_3D, 0);
+}
+
+void RenderingManager::getShadowTexture() {
+    char *pixels = new char[4062500];
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_3D, m_shadowTexID);
+    int dims[3];
+    glGetTexLevelParameteriv(GL_TEXTURE_3D, 2, GL_TEXTURE_WIDTH, &dims[0]);
+    glGetTexLevelParameteriv(GL_TEXTURE_3D, 2, GL_TEXTURE_HEIGHT, &dims[1]);
+    glGetTexLevelParameteriv(GL_TEXTURE_3D, 2, GL_TEXTURE_DEPTH, &dims[2]);
+    std::cout << "DIMS: x=" << dims[0] << ", y=" << dims[1] << ", z=" << dims[2] << std::endl;
+    glGetTexImage(GL_TEXTURE_3D, 2, GL_RED_INTEGER, GL_UNSIGNED_BYTE, pixels);
+    delete pixels;
 }
 
 void RenderingManager::uploadScene(Scene &sc)
@@ -109,6 +126,7 @@ void RenderingManager::uploadScene(Scene &sc)
 
 void RenderingManager::uploadObjects(Scene &sc) {
     ////////////////////////////////////////////////////// LOADING OBJECTS //////////////////////////////////////////////////////
+    std::cout << "OK1" << std::endl;
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_storageBufferIDs[0]);
     // TODO: Copy *existing* buffer data from GPU to CPU, in order to update cleverly only a single cube in whole buffer 
     // glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sc.objects.size() * m_oAlignOffset, (void *)(p));
@@ -123,16 +141,18 @@ void RenderingManager::uploadObjects(Scene &sc) {
     // Allocate a Shaderstorage buffer on the GPU memory
     glBufferData(GL_SHADER_STORAGE_BUFFER, sc.objects.size() * m_oAlignOffset, NULL, GL_DYNAMIC_DRAW);
 
+    std::cout << "OK2" << std::endl;
     m_numObjInShader = 0;
     if (sc.numObjects() != 0) {
         // glMapBuffer is used to get a pointer to the GPU memory
         GLubyte* ptr = (GLubyte*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
-
         for (const auto &obj : sc.objects) {
             int block_offset = m_numObjInShader * m_oAlignOffset;
             std::memcpy(ptr + block_offset + m_oOffsets[0], &(obj.c.transMat), sizeof(glm::mat4));
             std::memcpy(ptr + block_offset + m_oOffsets[1], &(obj.c.halfSize), sizeof(float));
             std::memcpy(ptr + block_offset + m_oOffsets[2], obj.material_index, sizeof(int) * 6);
+            std::memcpy(ptr + block_offset + m_oOffsets[3], obj.containing_voxels, sizeof(glm::vec3) * 8);
+            std::memcpy(ptr + block_offset + m_oOffsets[4], &obj.containing_voxels_count, sizeof(int));
             m_numObjInShader++;
         }
 
@@ -141,6 +161,7 @@ void RenderingManager::uploadObjects(Scene &sc) {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
+    std::cout << "OK3" << std::endl;
     glUseProgram(m_computeShaderID);
     auto uniID = glGetUniformLocation(m_computeShaderID, "numObj");
     glUniform1ui(uniID, m_numObjInShader);

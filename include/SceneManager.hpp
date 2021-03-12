@@ -59,16 +59,15 @@ private:
     Scene               m_sc;
     float               m_cube_radius;
     std::vector <Object> m_objects;
-    std::vector<std::vector<std::vector<float>>> m_all_centroids;
 
     glm::mat4 setCenter(float x, float y, float z);
     Ray initRay(uint x, uint y);
     bool intersectPlanes(const glm::vec3 &axis, std::vector<Object>::iterator it, PlaneInfo &p_info);
     PlaneInfo intersectBox(Ray &r, std::vector<Object>::iterator it);
     PlaneHitInfo RaycastBoxes(Ray r);
-    void initAllCentroids(int level_count);
-    std::vector<std::vector<float>> initCentroid(int level);
-    void updateShadowTextureOneBox(glm::vec3 box_pos);
+    void updateShadowTextureOneBox(Object &box);
+    // bool getSeparatingPlane(const vec3& RPos, const vec3& Plane, const Cube& box1, const Cube&box2);
+    // bool getCollision(const Cube& box1, const Cube&box2);
 
 };
 #endif

@@ -3,7 +3,7 @@
 
 # include <vector>
 # include <glm/glm.hpp>
-
+# include <limits>
 ///////////// Structs that will be transfered to the GPU /////////////
 
 //Alignment: 16 bytes, therefore two vec4 vectors
@@ -38,10 +38,17 @@ struct Material
 
 struct Object
 {
+    Object() {
+        this->containing_voxels_count = 0;
+        for(int i = 0; i < 8; i++) {
+            this->containing_voxels[i] = glm::vec3(std::numeric_limits<int>::max());
+        };
+    };
     Cube        c;
-    glm::vec3   nearest_lowest_voxel; // Changing order will break padding!
-    float       mass;
     int         material_index[6];
+    glm::vec3   containing_voxels[8]; // Changing order will break padding!
+    int         containing_voxels_count;
+    float       mass;
 };
 
 struct Scene
@@ -55,7 +62,7 @@ struct Scene
     // Will be needed for uploading the scene in the SceneManager.
     static const unsigned int m_NumAttributesLights = 3;
     static const unsigned int m_NumAttributesMaterial = 4;
-    static const unsigned int m_NumAttributesObjects = 3;
+    static const unsigned int m_NumAttributesObjects = 5;
 
 
     unsigned int numObjects()

@@ -51,14 +51,16 @@ void    mainLoop(Raytracer &rt, OpenGL &gl, Camera &cam, PhysicsManager &pm, Ren
         }
         sm.selectPlane();
 
-        rm.uploadObjects(sm.getScene());
+        // rm.uploadObjects(sm.getScene());
         pm.step(sm.getScene(), last_update);
         rt.render_GPU(rm.getShadowTexID());
         delta_ticks = clock() - last_update; //the time, in ms, that took to render the scene
         if(delta_ticks > 0)
             fps = CLOCKS_PER_SEC / delta_ticks;
-        std::cout << "FPS: " << fps << std::endl;
+        // std::cout << "FPS: " << fps << std::endl;
+        (void)fps;
         glfwSwapBuffers(win);
+        // exit(0);
     }
 
     glfwTerminate();

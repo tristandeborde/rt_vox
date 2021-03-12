@@ -10,7 +10,6 @@ SceneManager::SceneManager(Camera &cam, PhysicsManager &pm, RenderingManager &rm
     m_sc = Scene();
     m_objects.reserve(1000);
     m_cube_radius = glm::sqrt(2*(pow(CUBE_SIZE/2, 2)));
-    this->initAllCentroids(LEVEL_COUNT);
     this->readScene();
     m_selection_mat_idx = 2;
     m_selected_plane = std::make_pair(m_sc.objects.end(), Planes::left);
@@ -168,7 +167,6 @@ void SceneManager::stickBox(clock_t last_update, const glm::vec3 &look){
     offset[static_cast<int>(m_selected_plane.second) / 2] = old_box_size;
     float offset_sign = static_cast<int>(m_selected_plane.second) % 2;
     offset = offset_sign != 0 ? offset * 1.f : offset * -1.f;
-    std::cout << offset_sign << std::endl;
     // TODO here: transform offset by transMat
     glm::vec3 new_box_pos = selected_box_pos + 2.f * offset;
 
@@ -190,7 +188,6 @@ void SceneManager::stickBox(clock_t last_update, const glm::vec3 &look){
     btRigidBody *new_body = m_pm.addBox(new_origin.x, new_origin.y, new_origin.z, new_box.mass, new_box.c.halfSize);
 
     // Get existing box
-    std::cout << box_index << std::endl;
     btRigidBody *existing_body = m_pm.getBox(box_index);
 
     // Stick boxes together
@@ -222,7 +219,7 @@ void SceneManager::readScene()
     //     {{setCenter(-2.5f, 1.5f, -2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1, {0.,0.,0.}},
     //     {{setCenter(4.f, 5.f, -2.f), 1.f}, {0, 0, 0, 0, 0, 0}, 1, {0.,0.,0.}},
     // };
-    this->generateWorld(40,10,40);
+    this->generateWorld(40,12,40);
 
     std::vector<PointLight> p_lights = {
         {glm::vec4(0.f, 10.f, 0.f, 1.f), glm::vec4(1.f, 1.f, 1.f, 0.f), glm::vec4(0.f, 0.f, 0.5f, 1.f)},
@@ -252,90 +249,99 @@ Scene &SceneManager::getScene(){
 
 void SceneManager::generateWorld(int l, int w, int h) {
     Object curr_cube;
-    for (int i=-20.f; i < l; i+=2) {
-        for (int j=-4.f; j < w; j+=2) {
-            for (int k=-20.f; k < h; k+=2) {
+    for (int i=-l/2; i < l/2; i+=2) {
+        for (int j=-w/2; j < w/2; j+=2) {
+            for (int k=-h/2; k < h/2; k+=2) {
                 // object_data = map[i][j][k]
                 if (j == 0.f) {
                     curr_cube.c = {setCenter(i, j, k), 1.f};
                     int init_materials[6] = {0, 0, 0, 0, 0, 0};
                     std::copy(std::begin(init_materials), std::end(init_materials), std::begin(curr_cube.material_index));
                     curr_cube.mass = 0;
-                    curr_cube.nearest_lowest_voxel = {0.,0.,0.};
                     m_sc.objects.push_back(curr_cube);
                     if (SHADOW_TEXTURE)
-                        this->updateShadowTextureOneBox(glm::vec3(i, j, k));
+                        this->updateShadowTextureOneBox(m_sc.objects.back());
                 }
             }
         }
     }
+    // unsigned char *data = new unsigned char[4062500];
+    // for (int i = 0; i < 4062500; i++)
+    //     data[i] = 1;
+    // m_rm.updateShadowTexture(2, -20.0, -6.0, -20.0, 250, 65, 250, data);
+    // this->m_rm.getShadowTexture();
+    // delete data;
 }
 
-void SceneManager::updateShadowTextureOneBox(glm::vec3 box_pos) {
-    float max_voxel_reach = (m_cube_radius + LOWEST_VOXEL_SIZE); // Max dist between box center and intersecting voxel's center
+void SceneManager::updateShadowTextureOneBox(Object &box) {
+    glm::vec3 box_pos = {box.c.transMat[3].x, box.c.transMat[3].y, box.c.transMat[3].z};
+    float max_voxel_reach = (m_cube_radius + LOWEST_VOXEL_SIZE/2); // Max dist between box center and intersecting voxel's center
     unsigned char data = 1;
 
-    for (int mip_level = 0; mip_level < LEVEL_COUNT; mip_level++) {
-        std::vector<glm::vec3> final_candidates;
-        std::vector<std::vector<float>> &centroid_set = m_all_centroids[mip_level];
+    // Ugly but more precise coarse check;
+    // TODO if too slow, replace by regular cube's sphere vs voxel's sphere check
+    for (int mip_level = 0; mip_level < 3; mip_level++) {
         std::vector<std::vector<float>> all_candidates;
-
-        // Ugly but more precise coarse check;
-        // TODO if too slow, replace by regular cube's sphere vs voxel's sphere check
+        glm::fvec3 min_bounds = glm::ceil(box_pos - max_voxel_reach);
+        min_bounds -= glm::mod(min_bounds, static_cast<float>(pow(2, mip_level)));
+        glm::fvec3 max_bounds = box_pos + max_voxel_reach; 
         for (int axis_index = 0; axis_index < 3; axis_index++) {
-            std::vector<float> &axis_centroids = centroid_set[axis_index];
             std::vector<float> axis_candidates;
-            auto start = std::lower_bound(axis_centroids.begin(), axis_centroids.end(), box_pos[axis_index] - max_voxel_reach);
-            auto end = std::upper_bound(axis_centroids.begin(), axis_centroids.end(), box_pos[axis_index] + max_voxel_reach);
-            for (auto it = start; it != end; it++) {
-                axis_candidates.push_back(*it);
+            for (int centroid = min_bounds[axis_index]; centroid <= max_bounds[axis_index]; centroid += pow(2, mip_level)) {
+                axis_candidates.push_back(centroid);
             }
             all_candidates.push_back(axis_candidates);
         }
-        
+        int total = 0;
         for (auto &x_candidate: all_candidates[0]) {
             for (auto &y_candidate: all_candidates[1]) {
                 for (auto &z_candidate: all_candidates[2]) {
-                    final_candidates.push_back({x_candidate, y_candidate, z_candidate});
+                    // TODO: Box-box intersection test to get rid of some candidates
+                    // Update Texture
+                    m_rm.updateShadowTexture(mip_level, x_candidate, y_candidate, z_candidate, 1, 1, 1, &data);
+                    box.containing_voxels[box.containing_voxels_count] = {x_candidate, y_candidate, z_candidate};
+                    box.containing_voxels_count += 1;
+                    total++;
                 }
             }
         }
-        // TODO: Box-box intersection test to get rid of some candidates
-        for (auto candidate: final_candidates) {
-            // Update texture
-            m_rm.updateShadowTexture(mip_level, candidate.x, candidate.y, candidate.z, 1, 1, 1, &data);
-        }
     }
 }
 
-void SceneManager::initAllCentroids(int level_count) {
-    // Initialize all possible centroids used for shadowtexture rasterization
-    for (int level = 0; level < level_count; level++) {
-        m_all_centroids.push_back(this->initCentroid(level));
-    }
-}
-
-std::vector<std::vector<float>> SceneManager::initCentroid(int level) {
-    std::vector<std::vector<float>> centroids_set;
-    glm:vec3 dim_sizes = m_rm.getStexDims();
-
-    int curr_voxel_len = LOWEST_VOXEL_SIZE * pow(2, level);
-    std::vector<float> x_axis_centroids(m_rm.getStexWidth()/curr_voxel_len);
-    centroids_set.push_back(x_axis_centroids);
-    std::vector<float> y_axis_centroids(m_rm.getStexHeight()/curr_voxel_len);
-    centroids_set.push_back(y_axis_centroids);
-    std::vector<float> z_axis_centroids(m_rm.getStexDepth()/curr_voxel_len);
-    centroids_set.push_back(z_axis_centroids);
+// #################################################
+// OBB-OBB Collision funcs
+// TODO: Try to simplify with glm
+// bool SceneManager::getSeparatingPlane(const vec3& RPos, const vec3& Plane, const Cube& box1, const Cube&box2)
+// {
+//     // Check if there's a separating plane in between the selected axes
     
-    float curr_pos;
-    int i = 0;
-    for (auto &centroid_axis: centroids_set) {
-        curr_pos = -(dim_sizes[i]/2-curr_voxel_len/2); // Starting point of centroid vector
-        for (auto &centroid: centroid_axis) {
-            centroid = curr_pos;
-            curr_pos += curr_voxel_len;
-        }
-        i++;
-    }
-    return centroids_set;
-}
+//     return (fabs(RPos*Plane) > 
+//         (fabs((box1.AxisX*box1.Half_size.x)*Plane) +
+//         fabs((box1.AxisY*box1.Half_size.y)*Plane) +
+//         fabs((box1.AxisZ*box1.Half_size.z)*Plane) +
+//         fabs((box2.AxisX*box2.Half_size.x)*Plane) + 
+//         fabs((box2.AxisY*box2.Half_size.y)*Plane) +
+//         fabs((box2.AxisZ*box2.Half_size.z)*Plane)));
+// }
+
+// bool SceneManager::getCollision(const Cube& box1, const Cube&box2)
+// {
+//     // test for separating planes in all 15 axes
+//     static glm::vec3 RPos = box2.Pos - box1.Pos;
+
+//     return !(getSeparatingPlane(RPos, box1.AxisX, box1, box2) ||
+//         getSeparatingPlane(RPos, box1.AxisY, box1, box2) ||
+//         getSeparatingPlane(RPos, box1.AxisZ, box1, box2) ||
+//         getSeparatingPlane(RPos, box2.AxisX, box1, box2) ||
+//         getSeparatingPlane(RPos, box2.AxisY, box1, box2) ||
+//         getSeparatingPlane(RPos, box2.AxisZ, box1, box2) ||
+//         getSeparatingPlane(RPos, box1.AxisX^box2.AxisX, box1, box2) ||
+//         getSeparatingPlane(RPos, box1.AxisX^box2.AxisY, box1, box2) ||
+//         getSeparatingPlane(RPos, box1.AxisX^box2.AxisZ, box1, box2) ||
+//         getSeparatingPlane(RPos, box1.AxisY^box2.AxisX, box1, box2) ||
+//         getSeparatingPlane(RPos, box1.AxisY^box2.AxisY, box1, box2) ||
+//         getSeparatingPlane(RPos, box1.AxisY^box2.AxisZ, box1, box2) ||
+//         getSeparatingPlane(RPos, box1.AxisZ^box2.AxisX, box1, box2) ||
+//         getSeparatingPlane(RPos, box1.AxisZ^box2.AxisY, box1, box2) ||
+//         getSeparatingPlane(RPos, box1.AxisZ^box2.AxisZ, box1, box2));
+// }
